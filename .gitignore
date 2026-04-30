@@ -2,3 +2,6 @@
 scripts/
 .DS_Store
 .gitignore
+.env
+global-bundle.pem
+__pycache__/

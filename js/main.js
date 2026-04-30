@@ -245,7 +245,7 @@ async function initApp() {
   setLoadingMessage("データ読み込み中……");
 
   const tryInit = async () => {
-    // 必要な JSON をまとめて取得し、以降の UI 更新に使う。
+    // 必要なデータをAPIからまとめて取得し、以降の UI 更新に使う。
     AppState.AINU_DATA = await loadAllAinuData();
 
     // 市町村リストをプルダウンに並べる。
@@ -352,7 +352,7 @@ function resetCelestialView() {
 // ============================================================
 // 市町村選択 UI の構築
 // ============================================================
-// city.json をもとにプルダウンリストを生成。
+// APIから取得した市町村マップをもとにプルダウンリストを生成。
 // 選択変更時は onCityChange で描画・情報を更新します。
 function setupCitySelect(cityMap) {
   const select = document.getElementById("city-select");
@@ -1053,7 +1053,7 @@ function updateAreaMapA11y(areaKeys) {
 // ============================================================
 // 緯度経度解決・天球図への反映
 // ============================================================
-// city.json の area/areas 定義を配列化して返却する。
+// 市町村マップの area/areas 定義を配列化して返却する。
 function normalizeAreaKeys(cityInfo) {
   if (!cityInfo) return [AREA_DEFAULT];
   if (Array.isArray(cityInfo.areas)) {
@@ -1064,7 +1064,7 @@ function normalizeAreaKeys(cityInfo) {
   return [AREA_DEFAULT];
 }
 
-// city.json から選択市町村の緯度経度を取得し、欠損している場合は札幌市をフォールバックする。
+// 市町村マップから選択市町村の緯度経度を取得し、欠損している場合は札幌市をフォールバックする。
 function resolveCityCoordinates(cityName, cityMap) {
   const map = cityMap || {};
   const fallback = map[DEFAULT_CITY_LOCATION] || {};
