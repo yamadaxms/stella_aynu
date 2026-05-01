@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlparse
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_PORT = 8000
 
 
@@ -64,7 +64,7 @@ def db_connect():
     except ModuleNotFoundError as exc:
         raise ApiError(
             HTTPStatus.INTERNAL_SERVER_ERROR,
-            "PostgreSQLドライバが見つかりません。`python3 -m pip install -r requirements.txt` を実行してください。",
+            "PostgreSQLドライバが見つかりません。`python3 -m pip install -r api/requirements.txt` を実行してください。",
         ) from exc
 
     conninfo = os.environ.get("DATABASE_URL")
