@@ -3,7 +3,7 @@
 // fetchによるデータ取得時のエラー検証やJSON変換は本モジュールで行い、呼び出し元はtry-catchで例外処理を一括管理できます。
 
 const API_BASE_URL = "https://yyyyy.elasticbeanstalk.com";
-//const AYNU_DATA_API_PATH = "/api/aynu-data";
+const AYNU_DATA_API_PATH = "/api/aynu-data";
 
 async function loadApiJSON(path) {
   //  const res = await fetch(path, { headers: { Accept: "application/json" }, cache: "no-store" });
