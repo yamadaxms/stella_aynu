@@ -11,6 +11,7 @@ from psycopg2.extras import RealDictCursor
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
+FALLBACK_DATA_DIR = Path(os.environ.get("AYNU_FALLBACK_DATA_DIR", ROOT_DIR / "v041" / "data"))
 
 application = Flask(__name__, static_folder=None)
 
@@ -20,6 +21,31 @@ CORS(application, resources={r"/api/*": {"origins": cors_origins or "*"}})
 
 class DataShapeError(RuntimeError):
     pass
+
+
+def use_file_fallback():
+    return os.environ.get("AYNU_USE_FILE_FALLBACK", "true").lower() not in {"0", "false", "no"}
+
+
+def load_fallback_json(filename):
+    if not use_file_fallback():
+        raise DataShapeError(f"{filename} is not available from the database.")
+
+    path = FALLBACK_DATA_DIR / filename
+    with path.open(encoding="utf-8") as f:
+        return json.load(f)
+
+
+def load_fallback_stars():
+    return load_fallback_json("star.json")
+
+
+def load_fallback_constellations():
+    return load_fallback_json("constellation.json")
+
+
+def load_fallback_city_map():
+    return build_city_map(load_fallback_json("city.json"))
 
 
 def get_conn():
@@ -93,9 +119,10 @@ def to_float(value):
 def to_star_key(value, source_column):
     if value is None:
         return None
-    if source_column in {"hip", "hip_id", "hip_number"}:
-        return f"HIP_{value}"
-    return str(value)
+    key = str(value).strip()
+    if source_column in {"hip", "hip_id", "hip_number", "hipparcos"} and key and not key.startswith("HIP_"):
+        return f"HIP_{key}"
+    return key
 
 
 def select_rows(conn, table, columns, selected_columns, published_column=None, order_column=None):
@@ -115,15 +142,15 @@ def select_rows(conn, table, columns, selected_columns, published_column=None, o
 
 
 def fetch_stars(conn):
-    table, columns = find_table(conn, ("star", "stars"))
+    table, columns = find_table(conn, ("star_master", "star", "stars", "hip_star", "hip_stars", "hipparcos", "hipparcos_star", "hipparcos_stars"))
     if not table:
-        raise DataShapeError("star/stars table is required for HIP coordinate data.")
+        return load_fallback_stars()
 
-    key_column = first_column(columns, ("hip_key", "key", "code", "hip", "hip_id", "hip_number", "star_id", "id"))
+    key_column = first_column(columns, ("hipparcos", "hip_key", "key", "code", "hip", "hip_id", "hip_number", "star_id", "id"))
     ra_column = first_column(columns, ("ra", "ra_deg", "right_ascension"))
     dec_column = first_column(columns, ("dec", "dec_deg", "declination"))
     if not key_column or not ra_column or not dec_column:
-        raise DataShapeError(f"{table} table must contain key, ra, and dec columns.")
+        return load_fallback_stars()
 
     rows = select_rows(conn, table, columns, [key_column, ra_column, dec_column], order_column=key_column)
     stars = {}
@@ -133,13 +160,22 @@ def fetch_stars(conn):
         dec = to_float(row.get(dec_column))
         if key and ra is not None and dec is not None:
             stars[key] = {"ra": ra, "dec": dec}
-    return stars
+    return stars or load_fallback_stars()
 
 
 def fetch_constellations(conn):
+    exact_tables = {
+        "star_culture": get_table_columns(conn, "star_culture"),
+        "constellation_list": get_table_columns(conn, "constellation_list"),
+        "constellation_line_list": get_table_columns(conn, "constellation_line_list"),
+        "s_area_list_c": get_table_columns(conn, "s_area_list_c"),
+    }
+    if all(exact_tables.values()):
+        return fetch_constellations_from_ddl(conn) or load_fallback_constellations()
+
     table, columns = find_table(conn, ("star_culture", "star_cultures", "constellation", "constellations"))
     if not table:
-        raise DataShapeError("star_culture/constellation table is required for star culture definitions.")
+        return load_fallback_constellations()
 
     key_column = first_column(columns, ("key", "code", "star_culture_key", "star_culture_id", "constellation_id", "id"))
     name_column = first_column(columns, ("name", "name_ja", "title", "title_ja"))
@@ -151,7 +187,10 @@ def fetch_constellations(conn):
     published_column = "is_published" if "is_published" in columns else None
 
     if not key_column or not name_column:
-        raise DataShapeError(f"{table} table must contain key/id and name/name_ja columns.")
+        return load_fallback_constellations()
+
+    if not lines_column or not aynu_column:
+        return load_fallback_constellations()
 
     selected_columns = [
         column
@@ -173,7 +212,7 @@ def fetch_constellations(conn):
                 "aynu": parse_json_value(row.get(aynu_column), []) if aynu_column else [],
             }
         )
-    return constellations
+    return constellations or load_fallback_constellations()
 
 
 def aynu_codes_to_area_keys(codes):
@@ -192,10 +231,127 @@ def aynu_codes_to_area_keys(codes):
     return keys
 
 
+def s_area_to_aynu_code(value):
+    area = str(value).strip()
+    if area in {"1", "2", "3", "4", "5"}:
+        return f"aynu{area}"
+    if area.startswith("aynu"):
+        return area
+    return None
+
+
+def fetch_constellations_from_ddl(conn):
+    culture_rows = query_rows(
+        conn,
+        """
+        SELECT
+            sc.star_culture_id,
+            sc.name_ja,
+            sc.meaning,
+            sc.original_meaning,
+            sc.memo,
+            sc.constellation_key,
+            cl.ra,
+            cl."dec"
+        FROM star_culture sc
+        LEFT JOIN constellation_list cl
+          ON cl.constellation_key = sc.constellation_key
+        WHERE sc.is_published = true
+          AND (cl.constellation_key IS NULL OR cl.is_published = true)
+        ORDER BY sc.star_culture_id
+        """,
+    )
+
+    line_rows = query_rows(
+        conn,
+        """
+        SELECT constellation_key, line_no, point_no, hipparcos
+        FROM constellation_line_list
+        ORDER BY constellation_key, line_no, point_no
+        """,
+    )
+    area_rows = query_rows(
+        conn,
+        """
+        SELECT constellation_key, s_area
+        FROM s_area_list_c
+        ORDER BY constellation_key, s_area
+        """,
+    )
+
+    lines_by_constellation = {}
+    for row in line_rows:
+        constellation_key = row["constellation_key"]
+        line_no = row["line_no"]
+        lines_by_constellation.setdefault(constellation_key, {}).setdefault(line_no, []).append(to_star_key(row["hipparcos"], "hipparcos"))
+
+    areas_by_constellation = {}
+    for row in area_rows:
+        code = s_area_to_aynu_code(row["s_area"])
+        if code:
+            areas_by_constellation.setdefault(row["constellation_key"], []).append(code)
+
+    constellations = []
+    for row in culture_rows:
+        constellation_key = row["constellation_key"]
+        line_groups = lines_by_constellation.get(constellation_key, {})
+        lines = [points for _, points in sorted(line_groups.items()) if points]
+        aynu = areas_by_constellation.get(constellation_key, [])
+        description = row["meaning"] or row["original_meaning"] or row["memo"] or ""
+
+        constellations.append(
+            {
+                "key": str(row["star_culture_id"]),
+                "ra": to_float(row["ra"]),
+                "dec": to_float(row["dec"]),
+                "name": row["name_ja"] or "",
+                "description": description,
+                "lines": lines,
+                "aynu": aynu,
+            }
+        )
+
+    return constellations
+
+
+def build_city_map(city_list):
+    city_map = {}
+    if not isinstance(city_list, list):
+        return city_map
+
+    for item in city_list:
+        if not isinstance(item, dict) or not item.get("city"):
+            continue
+
+        area_keys = aynu_codes_to_area_keys(item.get("aynu"))
+        entry = {
+            "forecast": item.get("forecast"),
+            "region": item.get("area"),
+            "bureau": item.get("subprefecture"),
+            "lat": to_float(item.get("lat")),
+            "lon": to_float(item.get("lon")),
+        }
+        if len(area_keys) > 1:
+            entry["areas"] = area_keys
+        elif len(area_keys) == 1:
+            entry["area"] = area_keys[0]
+
+        city_map[str(item["city"])] = entry
+
+    return city_map
+
+
 def fetch_city_map(conn):
+    exact_tables = {
+        "present_area_master": get_table_columns(conn, "present_area_master"),
+        "s_area_list_p": get_table_columns(conn, "s_area_list_p"),
+    }
+    if all(exact_tables.values()):
+        return fetch_city_map_from_ddl(conn) or load_fallback_city_map()
+
     table, columns = find_table(conn, ("city", "cities", "municipality", "municipalities"))
     if not table:
-        raise DataShapeError("city/cities table is required for municipality area data.")
+        return load_fallback_city_map()
 
     city_column = first_column(columns, ("city", "name", "name_ja", "municipality"))
     forecast_column = first_column(columns, ("forecast", "forecast_area"))
@@ -207,7 +363,10 @@ def fetch_city_map(conn):
     area_key_column = first_column(columns, ("area_key", "area_keys"))
 
     if not city_column:
-        raise DataShapeError(f"{table} table must contain city/name column.")
+        return load_fallback_city_map()
+
+    if not aynu_column and not area_key_column:
+        return load_fallback_city_map()
 
     selected_columns = [
         column
@@ -249,6 +408,57 @@ def fetch_city_map(conn):
 
         city_map[str(city_name)] = entry
 
+    return city_map or load_fallback_city_map()
+
+
+def fetch_city_map_from_ddl(conn):
+    rows = query_rows(
+        conn,
+        """
+        SELECT
+            p.city,
+            p.forecast,
+            p.area,
+            p.subprefecture,
+            p.lat,
+            p.lon,
+            s.s_area
+        FROM present_area_master p
+        LEFT JOIN s_area_list_p s
+          ON s.city = p.city
+        ORDER BY p.city, s.s_area
+        """,
+    )
+
+    city_map = {}
+    for row in rows:
+        city = row["city"]
+        entry = city_map.setdefault(
+            city,
+            {
+                "forecast": row["forecast"],
+                "region": row["area"],
+                "bureau": row["subprefecture"],
+                "lat": to_float(row["lat"]),
+                "lon": to_float(row["lon"]),
+            },
+        )
+
+        area_key = None
+        code = s_area_to_aynu_code(row["s_area"])
+        if code:
+            area_key = aynu_codes_to_area_keys([code])[0]
+
+        if not area_key:
+            continue
+
+        if "area" not in entry and "areas" not in entry:
+            entry["area"] = area_key
+        elif entry.get("area") and entry["area"] != area_key:
+            entry["areas"] = [entry.pop("area"), area_key]
+        elif "areas" in entry and area_key not in entry["areas"]:
+            entry["areas"].append(area_key)
+
     return city_map
 
 
@@ -276,7 +486,17 @@ def get_star_cultures():
     except DataShapeError as exc:
         return jsonify({"error": str(exc)}), 500
     except KeyError as exc:
+        if use_file_fallback():
+            return jsonify(
+                {
+                    "stars": load_fallback_stars(),
+                    "constellations": load_fallback_constellations(),
+                    "cityMap": load_fallback_city_map(),
+                }
+            )
         return jsonify({"error": f"Missing required environment variable: {exc.args[0]}"}), 500
+    except (OSError, json.JSONDecodeError) as exc:
+        return jsonify({"error": "Fallback data could not be loaded", "detail": str(exc)}), 500
     except psycopg2.Error as exc:
         return jsonify({"error": "Database query failed", "detail": str(exc)}), 500
 

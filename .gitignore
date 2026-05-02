@@ -10,3 +10,5 @@ __pycache__/
 .vscode/tasks.json
 .gitignore
 .vscode/settings.json
+api/api.zip
+ddl.txt
