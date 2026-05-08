@@ -2,7 +2,7 @@
 // 各関数は役割を明確に分離し、データ取得・検証・変換の責務を担います。
 // fetchによるデータ取得時のエラー検証やJSON変換は本モジュールで行い、呼び出し元はtry-catchで例外処理を一括管理できます。
 
-const API_BASE_URL = (window.AYNU_API_BASE_URL || "http://stella-aynu-api-env.eba-icmiu7gn.ap-northeast-1.elasticbeanstalk.com").replace(/\/$/, "");
+const API_BASE_URL = (window.AYNU_API_BASE_URL || "https://b43aedz221.execute-api.ap-northeast-1.amazonaws.com").replace(/\/$/, "");
 const AYNU_DATA_API_PATH = `${API_BASE_URL}/api/aynu-data`;
 
 async function loadApiJSON(url) {
