@@ -351,7 +351,7 @@ function resetCelestialView() {
 // 選択変更時は onCityChange で描画・情報を更新します。
 function setupCitySelect(cityMap) {
   const select = document.getElementById("city-select");
-  const cities = Object.keys(cityMap || {});
+  const cities = Object.keys(cityMap || {}).sort((a, b) => getCityDisplayOrder(cityMap[a]) - getCityDisplayOrder(cityMap[b]));
 
   if (!select) {
     setStatusMessage("内部エラー: 市町村選択UIが見つかりません。", { isError: true, persistent: true });
@@ -390,6 +390,11 @@ function setupCitySelect(cityMap) {
   if (!select.getAttribute("aria-label")) {
     select.setAttribute("aria-label", "現在地（市町村）");
   }
+}
+
+function getCityDisplayOrder(cityInfo) {
+  const display = Number(cityInfo?.display);
+  return Number.isFinite(display) ? display : Number.POSITIVE_INFINITY;
 }
 
 // ============================================================
