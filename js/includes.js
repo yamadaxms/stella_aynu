@@ -7,6 +7,8 @@
   // 静的HTMLのまま共通部品化しているため、fetch が使えない file:// 直開きでは失敗する場合がある。
   const HEADER_PLACEHOLDER_ID = "site-header-include";
   const HEADER_PARTIAL_PATH = "partials/site-header.html";
+  let headerResizeObserver = null;
+  let lastHeaderHeight = -1;
 
   function inferCurrentPage() {
     // パス末尾のファイル名を現在ページとして扱う。
@@ -34,6 +36,35 @@
     link?.setAttribute("aria-current", "page");
   }
 
+  function updateHeaderHeightVariable({ notifyResize = false } = {}) {
+    // ヘッダーはHTML片として後から挿入されるため、実測値をCSS変数へ渡して
+    // 星図ページの3カラム領域を「表示領域 - ヘッダー高」に正確に収める。
+    const header = document.querySelector(".site-header");
+    const height = header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+    if (height === lastHeaderHeight) return;
+    lastHeaderHeight = height;
+    document.documentElement.style.setProperty("--site-header-height", `${height}px`);
+    if (notifyResize) {
+      window.dispatchEvent(new Event("resize"));
+    }
+  }
+
+  function observeHeaderHeight() {
+    const header = document.querySelector(".site-header");
+    if (!header) {
+      updateHeaderHeightVariable();
+      return;
+    }
+
+    headerResizeObserver?.disconnect();
+    if (typeof ResizeObserver === "function") {
+      headerResizeObserver = new ResizeObserver(() => updateHeaderHeightVariable({ notifyResize: true }));
+      headerResizeObserver.observe(header);
+    }
+
+    updateHeaderHeightVariable({ notifyResize: true });
+  }
+
   async function loadSiteHeader() {
     // 各ページ側には <div id="site-header-include"></div> だけ置き、
     // ここでHTML片全体に差し替える。outerHTML を使うことで不要なラッパーをDOMに残さない。
@@ -49,6 +80,7 @@
     placeholder.outerHTML = html;
 
     setActiveNav();
+    observeHeaderHeight();
   }
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -61,6 +93,9 @@
         placeholder.textContent =
           "ヘッダの読み込みに失敗しました（ローカルファイル直開きだと動かない場合があります）。";
       }
+      updateHeaderHeightVariable({ notifyResize: true });
     });
   });
+
+  window.addEventListener("resize", updateHeaderHeightVariable);
 })();

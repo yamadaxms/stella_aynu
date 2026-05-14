@@ -26,6 +26,11 @@ body {
   -ms-user-select: none; /* IE/Edge用 */
 }
 
+body.star-map-page {
+  height: 100dvh; /* ヘッダー込みで星図画面を収めるため、ビューポート高を基準にする */
+  overflow: hidden; /* デスクトップ表示ではページ全体のスクロールバーを出さない */
+}
+
 /* ==============================
  * 画像の右クリック・ドラッグ・コピー防止
  * ==============================
@@ -163,9 +168,11 @@ body::after {
   display: flex; /* 横並びレイアウトにする */
   flex-wrap: nowrap; /* デスクトップでは3カラムを維持 */
   max-width: 1600px; /* 1600px 幅で整える */
+  height: calc(100dvh - var(--site-header-height, 0px)); /* 実ヘッダー高を差し引いて画面内へ収める */
   margin: 0 auto; /* 中央寄せ */
   width: 100%; /* 余白を含めて横幅を占有 */
-  padding: 0 0.75rem 1rem; /* 端の余白と下余白 */
+  padding: 0 0.75rem; /* 端の余白 */
+  overflow: hidden; /* 子ペインの高さ超過でページスクロールバーを出さない */
 }
 
 /* =========================================================
@@ -177,10 +184,12 @@ body::after {
 .controls {
   flex: 0 0 260px; /* 固定幅ベースのサイドパネル */
   max-width: 300px; /* 広がりすぎを防止 */
+  height: 100%;
   padding: 1rem; /* 内側余白 */
   background: #111827; /* 背景色 */
   border-right: 1px solid #1f2933; /* 右側に仕切り線 */
   box-sizing: border-box; /* パディング込みでサイズ計算 */
+  overflow: hidden; /* 左ペイン内の要素でページスクロールバーを発生させない */
 }
 
 .controls h2 {
@@ -193,14 +202,21 @@ body::after {
 .culture-panel {
   flex: 0 0 320px;
   max-width: 340px;
+  height: 100%;
   padding: 1rem;
   background: #111827;
   border-left: 1px solid #1f2933;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .culture-panel h2 {
+  flex: 0 0 auto;
   margin-top: 0;
+  margin-bottom: 0.75rem;
   font-size: 1rem;
 }
 
@@ -294,15 +310,15 @@ select {
  * ========================================================= */
 
 /* アイヌ民族星文化リスト
-   星図上で画面内にある項目だけをJSが残すため、高さを制限しても探索しやすいようスクロール可能にする。 */
+   右ペインの残り高さに収め、デスクトップでは一覧内スクロールバーを出さない。 */
 .aynu-list {
+  flex: 1 1 auto;
   list-style: none; /* 行頭マーカーを消す */
   padding-left: 0; /* 左インデントをなくす */
   margin: 0; /* 周囲の余白をゼロに */
   font-size: 0.85rem; /* リスト文字サイズ */
-  max-height: calc(100vh - 220px); /* 右ペイン内で一覧を長めに表示 */
-  min-height: 210px; /* デスクトップで一覧領域を確保 */
-  overflow-y: auto; /* 内容が溢れたら縦スクロール */
+  min-height: 0; /* flex子要素として残り高さへ縮められるようにする */
+  overflow: hidden; /* 右ペイン内のスクロールバーを出さない */
 }
 
 /* アイヌ民族星文化リストの各項目 */
@@ -409,8 +425,12 @@ a[href*="x.com/trapezium_orion"] {
 .map-area {
   flex: 1 1 0; /* 余ったスペースを占有 */
   min-width: 0; /* はみ出し防止の最小幅リセット */
+  height: 100%;
   padding: 0.5rem; /* 内側余白 */
   box-sizing: border-box; /* パディング込みで計算 */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* d3-celestial のコンテナ（星図の「枠」）
@@ -419,7 +439,9 @@ a[href*="x.com/trapezium_orion"] {
    d3-celestial は内部で canvas を挿入するため、親側を relative にして配置基準を作る
  */
 #celestial-map {
+  flex: 1 1 auto;
   width: 100%; /* 横幅いっぱいに描画 */
+  min-height: 0;
   max-height: none; /* clampで制御するため上限は不要 */
   position: relative; /* 子要素(canvas)の絶対配置の基準にするためrelativeを指定 */
   overflow: hidden; /* はみ出し分でレイアウトが崩れないようにする */
@@ -560,34 +582,50 @@ a[href*="x.com/trapezium_orion"] {
  * ========================================================= */
 
 @media (max-width: 900px) {
+  body.star-map-page {
+    height: auto;
+    min-height: 100dvh;
+    overflow: auto;
+  }
+
   /* 狭い画面では縦積みに変更 */
   .layout {
     flex-direction: column;
     flex-wrap: nowrap;
+    height: auto;
+    overflow: visible;
+    padding-bottom: 1rem;
   }
 
   /* 左右パネルを全面幅へ */
   .controls {
     flex: 0 0 auto;
+    height: auto;
     max-width: 100%;
     border-right: none;
     border-bottom: 1px solid #1f2933;
+    overflow: visible;
   }
 
   .map-area {
     flex: 0 0 auto;
+    height: auto;
+    overflow: visible;
   }
 
   .culture-panel {
     flex: 0 0 auto;
+    height: auto;
     max-width: 100%;
     border-left: none;
     border-top: 1px solid #1f2933;
+    overflow: visible;
   }
 
   .aynu-list {
     max-height: 45vh;
     min-height: 0;
+    overflow-y: auto;
   }
 
   /* 星図コンテナはviewport高ベースに */
