@@ -24,18 +24,18 @@
         <h3 id="star-culture-search-heading">検索条件</h3>
         <div class="star-culture-search-grid">
           <div class="star-culture-field">
-            <label for="star-culture-query">名称・意味・key</label>
+            <label for="star-culture-query">名称・意味・英字表記・関連天体</label>
             <input id="star-culture-query" type="search" autocomplete="off" />
           </div>
           <div class="star-culture-field">
-            <label for="star-culture-region">地域</label>
+            <label for="star-culture-region">伝承地域</label>
             <select id="star-culture-region">
               <option value="">すべて</option>
-              <option value="aynu1">aynu1</option>
-              <option value="aynu2">aynu2</option>
-              <option value="aynu3">aynu3</option>
-              <option value="aynu4">aynu4</option>
-              <option value="aynu5">aynu5</option>
+              <option value="aynu1">区分Ⅰ</option>
+              <option value="aynu2">区分Ⅱ</option>
+              <option value="aynu3">区分Ⅲ</option>
+              <option value="aynu4">区分Ⅳ</option>
+              <option value="aynu5">区分Ⅴ</option>
             </select>
           </div>
           <div class="star-culture-actions">
@@ -60,8 +60,9 @@
               <tr>
                 <th scope="col">名称</th>
                 <th scope="col">意味</th>
-                <th scope="col">地域 aynu</th>
-                <th scope="col">星文化キー</th>
+                <th scope="col">英字表記</th>
+                <th scope="col">関連天体</th>
+                <th scope="col">伝承地域</th>
                 <th scope="col">詳細</th>
               </tr>
             </thead>
@@ -72,7 +73,7 @@
     </main>
 
     <script src="js/dataLoader.js?v=20260501"></script>
-    <script src="js/starCultureList.js?v=20260515"></script>
+    <script src="js/starCultureList.js?v=20260515a"></script>
     <script src="js/includes.js?v=20260214"></script>
     <script src="js/contentProtection.js?v=20260214"></script>
   </body>

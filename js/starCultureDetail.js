@@ -12,6 +12,76 @@
     return text || "-";
   }
 
+  const AYNU_LABEL_MAP = {
+    aynu1: "区分Ⅰ",
+    aynu2: "区分Ⅱ",
+    aynu3: "区分Ⅲ",
+    aynu4: "区分Ⅳ",
+    aynu5: "区分Ⅴ",
+  };
+
+  function getPublishValue(item) {
+    return item?.is_published ?? item?.star_culture?.is_published ?? item?.starCulture?.is_published;
+  }
+
+  function hasPublishValue(item) {
+    return getPublishValue(item) !== undefined && getPublishValue(item) !== null;
+  }
+
+  function isPublished(item, hasPublishFlag) {
+    if (!hasPublishFlag && !hasPublishValue(item)) return true;
+
+    const value = getPublishValue(item);
+    if (value === true) return true;
+    if (value === 1) return true;
+    if (typeof value === "string") {
+      return ["true", "t", "1"].includes(value.trim().toLowerCase());
+    }
+    return false;
+  }
+
+  function getCultureKey(item) {
+    return (
+      item?.key ??
+      item?.star_culture?.key ??
+      item?.starCulture?.key ??
+      item?.star_culture_key ??
+      ""
+    );
+  }
+
+  function getName(item) {
+    return item?.name ?? item?.star_culture?.name ?? item?.starCulture?.name ?? "";
+  }
+
+  function getDescription(item) {
+    return (
+      item?.description ??
+      item?.star_culture?.description ??
+      item?.starCulture?.description ??
+      item?.meaning ??
+      ""
+    );
+  }
+
+  function getAynuCodes(item) {
+    const value = item?.aynu ?? item?.star_culture?.aynu ?? item?.starCulture?.aynu;
+    return Array.isArray(value) ? value : [];
+  }
+
+  function getLines(item) {
+    const value = item?.lines ?? item?.star_culture?.lines ?? item?.starCulture?.lines;
+    return Array.isArray(value) ? value : [];
+  }
+
+  function getRa(item) {
+    return item?.ra ?? item?.star_culture?.ra ?? item?.starCulture?.ra;
+  }
+
+  function getDec(item) {
+    return item?.dec ?? item?.star_culture?.dec ?? item?.starCulture?.dec;
+  }
+
   function formatNumber(value) {
     const num = Number(value);
     if (!Number.isFinite(num)) return "-";
@@ -22,8 +92,11 @@
 
   function formatAynu(value) {
     if (!Array.isArray(value)) return "-";
-    const codes = value.map((item) => String(item || "").trim()).filter(Boolean);
-    return codes.length ? codes.join(" / ") : "-";
+    const labels = value
+      .map((item) => String(item || "").trim())
+      .filter(Boolean)
+      .map((code) => AYNU_LABEL_MAP[code] || code);
+    return labels.length ? labels.join(" / ") : "-";
   }
 
   function setHidden(el, hidden) {
@@ -86,12 +159,12 @@
 
   function renderBasic(item) {
     els.basic.textContent = "";
-    appendBasicRow("星文化キー", formatText(item?.key));
-    appendBasicRow("名称", formatText(item?.name));
-    appendBasicRow("意味", formatText(item?.description));
-    appendBasicRow("RA", formatNumber(item?.ra));
-    appendBasicRow("Dec", formatNumber(item?.dec));
-    appendBasicRow("地域 aynu", formatAynu(item?.aynu));
+    appendBasicRow("星文化キー", formatText(getCultureKey(item)));
+    appendBasicRow("名称", formatText(getName(item)));
+    appendBasicRow("意味", formatText(getDescription(item)));
+    appendBasicRow("RA", formatNumber(getRa(item)));
+    appendBasicRow("Dec", formatNumber(getDec(item)));
+    appendBasicRow("伝承地域", formatAynu(getAynuCodes(item)));
   }
 
   function renderLines(lines) {
@@ -149,11 +222,12 @@
   }
 
   function renderDetail(item, stars) {
+    const lines = getLines(item);
     renderBasic(item);
-    renderLines(item?.lines);
-    renderStars(item?.lines, stars);
+    renderLines(lines);
+    renderStars(lines, stars);
 
-    const key = String(item?.key ?? "").trim();
+    const key = String(getCultureKey(item)).trim();
     if (els.listLink && key) {
       els.listLink.href = `star-cultures.html?key=${encodeURIComponent(key)}`;
     }
@@ -185,7 +259,8 @@
 
       const data = await loadAllAynuData();
       const constellations = Array.isArray(data?.constellations) ? data.constellations : [];
-      const item = constellations.find((entry) => String(entry?.key ?? "") === key);
+      const hasPublishFlag = constellations.some(hasPublishValue);
+      const item = constellations.find((entry) => String(getCultureKey(entry)) === key && isPublished(entry, hasPublishFlag));
 
       if (!item) {
         showStatus("該当する星文化情報が見つかりませんでした。");

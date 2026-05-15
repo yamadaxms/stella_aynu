@@ -3,6 +3,7 @@
 
   const state = {
     constellations: [],
+    hasPublishFlag: false,
     query: "",
     region: "",
   };
@@ -22,10 +23,121 @@
     return text || "-";
   }
 
-  function formatAynu(value) {
-    if (!Array.isArray(value)) return "-";
-    const codes = value.map((item) => String(item || "").trim()).filter(Boolean);
-    return codes.length ? codes.join(" / ") : "-";
+  const AYNU_LABEL_MAP = {
+    aynu1: "区分Ⅰ",
+    aynu2: "区分Ⅱ",
+    aynu3: "区分Ⅲ",
+    aynu4: "区分Ⅳ",
+    aynu5: "区分Ⅴ",
+  };
+
+  function getPublishValue(item) {
+    return item?.is_published ?? item?.star_culture?.is_published ?? item?.starCulture?.is_published;
+  }
+
+  function hasPublishValue(item) {
+    return getPublishValue(item) !== undefined && getPublishValue(item) !== null;
+  }
+
+  function isPublished(item) {
+    if (!state.hasPublishFlag && !hasPublishValue(item)) return true;
+
+    const value = getPublishValue(item);
+    if (value === true) return true;
+    if (value === 1) return true;
+    if (typeof value === "string") {
+      return ["true", "t", "1"].includes(value.trim().toLowerCase());
+    }
+    return false;
+  }
+
+  function getCultureKey(item) {
+    return (
+      item?.key ??
+      item?.star_culture?.key ??
+      item?.starCulture?.key ??
+      item?.star_culture_key ??
+      ""
+    );
+  }
+
+  function getName(item) {
+    return item?.name ?? item?.star_culture?.name ?? item?.starCulture?.name ?? "";
+  }
+
+  function getDescription(item) {
+    return (
+      item?.description ??
+      item?.star_culture?.description ??
+      item?.starCulture?.description ??
+      item?.meaning ??
+      ""
+    );
+  }
+
+  function getAynuCodes(item) {
+    const value = item?.aynu ?? item?.star_culture?.aynu ?? item?.starCulture?.aynu;
+    if (!Array.isArray(value)) return [];
+    return value.map((code) => String(code || "").trim()).filter(Boolean);
+  }
+
+  function formatAynu(item) {
+    const labels = getAynuCodes(item).map((code) => AYNU_LABEL_MAP[code] || code);
+    return labels.length ? labels.join(" / ") : "-";
+  }
+
+  function getNameEn(item) {
+    return (
+      item?.star_culture?.name_en ??
+      item?.starCulture?.name_en ??
+      item?.name_en ??
+      item?.nameEn ??
+      item?.star_culture_name_en ??
+      ""
+    );
+  }
+
+  function collectAstroNamesFrom(value, out) {
+    if (!value) return;
+
+    if (Array.isArray(value)) {
+      for (const item of value) collectAstroNamesFrom(item, out);
+      return;
+    }
+
+    if (typeof value === "string") {
+      const text = value.trim();
+      if (text) out.push(text);
+      return;
+    }
+
+    if (typeof value === "object") {
+      const text =
+        value.astro_name ??
+        value.astroName ??
+        value.name ??
+        value.star?.astro_name ??
+        value.star?.astroName ??
+        value.astro?.name ??
+        value.astro?.astro_name;
+      if (text) out.push(String(text).trim());
+    }
+  }
+
+  function getAstroNames(item) {
+    const names = [];
+    collectAstroNamesFrom(item?.star_astro_link, names);
+    collectAstroNamesFrom(item?.star_astro_links, names);
+    collectAstroNamesFrom(item?.astro_names, names);
+    collectAstroNamesFrom(item?.astroNames, names);
+    collectAstroNamesFrom(item?.related_astro_names, names);
+
+    return Array.from(new Set(names.filter(Boolean)));
+  }
+
+  function formatAstroNames(item) {
+    const names = getAstroNames(item);
+    return names.length ? names.join(",") : "-";
   }
 
   function setHidden(el, hidden) {
@@ -56,7 +168,7 @@
 
   function createDetailCell(item) {
     const td = document.createElement("td");
-    const key = String(item?.key ?? "").trim();
+    const key = String(getCultureKey(item)).trim();
 
     if (!key) {
       td.textContent = "-";
@@ -76,13 +188,19 @@
     const region = state.region;
 
     return state.constellations.filter((item) => {
+      if (!isPublished(item)) return false;
+
+      const nameEn = getNameEn(item);
+      const astroNames = getAstroNames(item).join(",");
       const matchesQuery =
         !query ||
-        normalizeText(item?.name).includes(query) ||
-        normalizeText(item?.description).includes(query) ||
-        normalizeText(item?.key).includes(query);
+        normalizeText(getName(item)).includes(query) ||
+        normalizeText(getDescription(item)).includes(query) ||
+        normalizeText(getCultureKey(item)).includes(query) ||
+        normalizeText(nameEn).includes(query) ||
+        normalizeText(astroNames).includes(query);
 
-      const aynu = Array.isArray(item?.aynu) ? item.aynu : [];
+      const aynu = getAynuCodes(item);
       const matchesRegion = !region || aynu.includes(region);
 
       return matchesQuery && matchesRegion;
@@ -96,10 +214,11 @@
     const fragment = document.createDocumentFragment();
     for (const item of rows) {
       const tr = document.createElement("tr");
-      tr.appendChild(createCell(formatText(item?.name), "star-culture-name-cell"));
-      tr.appendChild(createCell(formatText(item?.description), "star-culture-description-cell"));
-      tr.appendChild(createCell(formatAynu(item?.aynu), "star-culture-code-cell"));
-      tr.appendChild(createCell(formatText(item?.key), "star-culture-code-cell"));
+      tr.appendChild(createCell(formatText(getName(item)), "star-culture-name-cell"));
+      tr.appendChild(createCell(formatText(getDescription(item)), "star-culture-description-cell"));
+      tr.appendChild(createCell(formatText(getNameEn(item)), "star-culture-code-cell"));
+      tr.appendChild(createCell(formatAstroNames(item)));
+      tr.appendChild(createCell(formatAynu(item)));
       tr.appendChild(createDetailCell(item));
       fragment.appendChild(tr);
     }
@@ -161,10 +280,12 @@
 
       const data = await loadAllAynuData();
       state.constellations = Array.isArray(data?.constellations) ? data.constellations : [];
+      state.hasPublishFlag = state.constellations.some(hasPublishValue);
       render();
     } catch (err) {
       console.error(err);
       state.constellations = [];
+      state.hasPublishFlag = false;
       updateCount(0);
       showStatus(ERROR_MESSAGE);
       setHidden(els.empty, true);
