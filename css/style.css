@@ -399,11 +399,13 @@ a[href*="x.com/trapezium_orion"] {
 /* d3-celestial のコンテナ（星図の「枠」）
    - 高さを事前に確保し、描画要素の挿入前後で下の文章位置がズレるのを抑止
    - 内部の canvas は absolute で全面フィットさせ、レイアウト計算から外す
+   - 実際の width/height は js/main.js が投影法ごとの比率と表示エリア高から設定する
    d3-celestial は内部で canvas を挿入するため、親側を relative にして配置基準を作る
  */
 #celestial-map {
-  width: 100%; /* 横幅いっぱいに描画 */
-  max-height: none; /* clampで制御するため上限は不要 */
+  width: 100%; /* JS初期化前のフォールバック。初期化後はpx指定に置き換わる */
+  max-width: 100%; /* JS計算後も親幅からのはみ出しを防ぐ */
+  margin: 0 auto; /* 高さ基準で縮小された星図を右ペイン中央に置く */
   position: relative; /* 子要素(canvas)の絶対配置の基準にするためrelativeを指定 */
   overflow: hidden; /* はみ出し分でレイアウトが崩れないようにする */
 }
@@ -555,8 +557,8 @@ a[href*="x.com/trapezium_orion"] {
     border-bottom: 1px solid #1f2933;
   }
 
-  /* 星図コンテナはviewport高ベースに */
+  /* 星図コンテナの実寸はJSで表示エリアに合わせる */
   #celestial-map {
-    height: 60vh;
+    max-width: 100%;
   }
 }

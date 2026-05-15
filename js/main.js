@@ -23,6 +23,17 @@ const AYNU_LABEL_TEXT_ALIGN = "center";
 const DEFAULT_CITY_LOCATION = "札幌市"; // 緯度経度が欠損している場合のフォールバック先
 const PROJECTION_PLANISPHERE = "planisphere";
 const PLANISPHERE_BASE_PROJECTION = "stereographic";
+const CELESTIAL_VIEWPORT_GUTTER = 16;
+const CELESTIAL_RESIZE_DEBOUNCE_MS = 120;
+const CELESTIAL_PROJECTION_ASPECT = {
+  aitoff: 2,
+  mollweide: 2,
+  hammer: 2,
+  mercator: 2,
+  equirectangular: 2,
+  orthographic: 1,
+  stereographic: 1,
+};
 
 // areaキー→区分名の変換テーブル
 const AREA_LABEL_MAP = {
@@ -53,6 +64,7 @@ const AppState = {
   VISIBLE_AYNU_FEATURE_IDS: new Set(),
   DEFAULT_VIEW_ROTATE: [0, 0, 0],
   VIEW_RESET_TOKEN: 0,
+  CELESTIAL_RESIZE_TIMER: null,
 };
 
 // ============================================================
@@ -238,6 +250,8 @@ window.addEventListener("DOMContentLoaded", () => {
     resetBtn.addEventListener("click", () => resetCelestialView());
   }
 
+  window.addEventListener("resize", scheduleCelestialResize);
+
   // 88星座ON/OFFチェックボックスのイベント登録
   const constChk = document.getElementById("toggle-constellations");
   if (constChk) {
@@ -307,6 +321,57 @@ function formatMagLimit(value) {
   return `${v.toFixed(1)}等級`;
 }
 
+function getCelestialProjectionAspect(projection = CELESTIAL_CONFIG.projection) {
+  // d3-celestial の投影法ごとの見た目の縦横比に合わせ、表示サイズだけを縮放する。
+  return CELESTIAL_PROJECTION_ASPECT[projection] || 2;
+}
+
+function fitCelestialMapToViewport(projection = CELESTIAL_CONFIG.projection) {
+  // 星図の縦横比を保ったまま、現在の表示エリアに収まる最大サイズを計算する。
+  const map = document.getElementById(CELESTIAL_CONFIG.container);
+  const mapArea = map?.parentElement;
+  if (!map || !mapArea) return null;
+
+  const aspect = getCelestialProjectionAspect(projection);
+  const areaRect = mapArea.getBoundingClientRect();
+  const mapRect = map.getBoundingClientRect();
+  const availableWidth = Math.floor(mapArea.clientWidth || areaRect.width || window.innerWidth);
+  const availableHeight = Math.floor(window.innerHeight - mapRect.top - CELESTIAL_VIEWPORT_GUTTER);
+  const fallbackHeight = Math.floor(window.innerHeight * 0.6);
+  const maxHeight = Math.max(1, availableHeight > 0 ? availableHeight : fallbackHeight);
+  const widthByHeight = Math.floor(maxHeight * aspect);
+  const width = Math.max(1, Math.min(availableWidth, widthByHeight));
+  const height = Math.round(width / aspect);
+
+  map.style.width = `${width}px`;
+  map.style.height = `${height}px`;
+  CELESTIAL_CONFIG.width = width;
+
+  return { width, height, aspect };
+}
+
+function refreshCelestialSize() {
+  // リサイズ時はコンテナ寸法とライブラリ内部キャンバスの両方を更新する。
+  const size = fitCelestialMapToViewport();
+  if (!size) return;
+
+  if (typeof Celestial?.resize === "function") {
+    Celestial.resize();
+  } else if (typeof Celestial?.redraw === "function") {
+    Celestial.redraw();
+  }
+}
+
+function scheduleCelestialResize() {
+  if (AppState.CELESTIAL_RESIZE_TIMER) {
+    clearTimeout(AppState.CELESTIAL_RESIZE_TIMER);
+  }
+  AppState.CELESTIAL_RESIZE_TIMER = setTimeout(() => {
+    AppState.CELESTIAL_RESIZE_TIMER = null;
+    refreshCelestialSize();
+  }, CELESTIAL_RESIZE_DEBOUNCE_MS);
+}
+
 function applyStarMagnitudeLimit(limit) {
   // d3-celestial の stars.limit を更新し、表示する恒星の暗さ上限を変える。
   // 設定オブジェクトも同時に更新しておくことで、投影法変更など display() 再実行後も選択値を保てる。
@@ -336,6 +401,7 @@ function resetCelestialView() {
   // date() の getter が存在する場合のみ状態を退避（実装差分に備えて安全側）
   const currentDate = typeof Celestial?.date === "function" ? Celestial.date() : null;
 
+  fitCelestialMapToViewport(projection);
   Celestial.display(nextConfig);
 
   // display() の内部初期化が落ち着いた後に、ビューを確定させる
@@ -573,6 +639,7 @@ function applyProjection(projection) {
   // 「星座早見盤」のみ zenith 追従、それ以外は center 追従にする
   CELESTIAL_CONFIG.projection = actualProjection;
   CELESTIAL_CONFIG.follow = follow;
+  fitCelestialMapToViewport(actualProjection);
   const nextConfig = { ...CELESTIAL_CONFIG, projection: actualProjection, follow };
   Celestial.display(nextConfig);
 
@@ -875,6 +942,7 @@ function setupCelestial() {
   });
 
   // 設定を元に Celestial の描画を開始。
+  fitCelestialMapToViewport(CELESTIAL_CONFIG.projection);
   Celestial.display(CELESTIAL_CONFIG);
 
   // NOTE: 初期中心スナップショットは initApp() 側で（時刻反映後に）取得する。
