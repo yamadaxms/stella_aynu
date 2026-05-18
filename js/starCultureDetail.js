@@ -71,10 +71,10 @@
     els.basic.textContent = "";
     appendBasicRow("星文化ID", getField(item, "star_culture_id") || getCultureKey(item));
     appendBasicRow("名称", getField(item, "name_ja") || getField(item, "name"));
-    appendBasicRow("名称（英名）", getField(item, "name_en"));
+    appendBasicRow("名称（英字）", getField(item, "name_en"));
     appendBasicRow("意味", getField(item, "meaning") || getField(item, "description"));
     appendBasicRow("オリジナル名称", getField(item, "original_name_ja"));
-    appendBasicRow("オリジナル名称（英名）", getField(item, "original_name_en"));
+    appendBasicRow("オリジナル名称（英字）", getField(item, "original_name_en"));
     appendBasicRow("オリジナル意味", getField(item, "original_meaning"));
     appendBasicRow("メモ", getField(item, "memo"));
   }

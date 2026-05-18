@@ -78,12 +78,28 @@
     return item?.key ?? item?.star_culture?.key ?? item?.starCulture?.key ?? item?.star_culture_key ?? "";
   }
 
+  function getStarCultureId(item) {
+    return item?.star_culture_id ?? item?.star_culture?.star_culture_id ?? item?.starCulture?.star_culture_id ?? item?.starCulture?.starCultureId ?? item?.starCultureId ?? "";
+  }
+
   function getName(item) {
     return item?.name ?? item?.star_culture?.name ?? item?.starCulture?.name ?? "";
   }
 
   function getDescription(item) {
     return item?.description ?? item?.star_culture?.description ?? item?.starCulture?.description ?? item?.meaning ?? "";
+  }
+
+  function getOriginalNameJa(item) {
+    return item?.star_culture?.original_name_ja ?? item?.starCulture?.original_name_ja ?? item?.starCulture?.originalNameJa ?? item?.original_name_ja ?? item?.originalNameJa ?? "";
+  }
+
+  function getOriginalNameEn(item) {
+    return item?.star_culture?.original_name_en ?? item?.starCulture?.original_name_en ?? item?.starCulture?.originalNameEn ?? item?.original_name_en ?? item?.originalNameEn ?? "";
+  }
+
+  function getOriginalMeaning(item) {
+    return item?.star_culture?.original_meaning ?? item?.starCulture?.original_meaning ?? item?.starCulture?.originalMeaning ?? item?.original_meaning ?? item?.originalMeaning ?? "";
   }
 
   function getAynuCodes(item) {
@@ -281,9 +297,18 @@
     return state.constellations.filter((item) => {
       if (!isPublished(item)) return false;
 
-      const nameEn = getNameEn(item);
       const astroNames = getAstroNames(item).join(",");
-      const matchesQuery = !query || normalizeText(getName(item)).includes(query) || normalizeText(getDescription(item)).includes(query) || normalizeText(getCultureKey(item)).includes(query) || normalizeText(nameEn).includes(query) || normalizeText(astroNames).includes(query);
+      const queryTargets = [
+        getName(item),
+        getNameEn(item),
+        getDescription(item),
+        getStarCultureId(item),
+        getOriginalNameJa(item),
+        getOriginalNameEn(item),
+        getOriginalMeaning(item),
+        astroNames,
+      ];
+      const matchesQuery = !query || queryTargets.some((value) => normalizeText(value).includes(query));
 
       const matchesRegion = regions.length === 0 || regions.some((region) => hasRegion(item, region));
 
