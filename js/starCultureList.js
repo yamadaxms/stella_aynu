@@ -78,6 +78,18 @@
     return item?.key ?? item?.star_culture?.key ?? item?.starCulture?.key ?? item?.star_culture_key ?? "";
   }
 
+  function getConstellationKey(item) {
+    return (
+      item?.constellation_key ??
+      item?.star_culture?.constellation_key ??
+      item?.starCulture?.constellation_key ??
+      item?.constellationKey ??
+      item?.star_culture?.constellationKey ??
+      item?.starCulture?.constellationKey ??
+      ""
+    );
+  }
+
   function getStarCultureId(item) {
     return item?.star_culture_id ?? item?.star_culture?.star_culture_id ?? item?.starCulture?.star_culture_id ?? item?.starCulture?.starCultureId ?? item?.starCultureId ?? "";
   }
@@ -266,6 +278,11 @@
     return createCell(formatRegionMark(item, region), "star-culture-region-mark-cell");
   }
 
+  function createChartMarkCell(item) {
+    const hasChart = String(getConstellationKey(item)).trim() !== "";
+    return createCell(hasChart ? "○" : "", "star-culture-chart-mark-cell");
+  }
+
   function createDetailCell(item) {
     const td = document.createElement("td");
     td.className = "star-culture-detail-cell";
@@ -328,6 +345,7 @@
       tr.appendChild(createRegionMarkCell(item, "aynu4"));
       tr.appendChild(createRegionMarkCell(item, "aynu5"));
       tr.appendChild(createCell(formatOtherRegions(item), "star-culture-other-region-cell"));
+      tr.appendChild(createChartMarkCell(item));
       fragment.appendChild(tr);
     }
 

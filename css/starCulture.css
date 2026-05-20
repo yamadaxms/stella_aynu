@@ -295,6 +295,13 @@
   text-align: center;
 }
 
+.star-culture-chart-mark-cell {
+  min-width: 5rem;
+  color: #ffeb3b;
+  font-weight: 700;
+  text-align: center;
+}
+
 .star-culture-other-region-cell {
   min-width: 9rem;
 }
