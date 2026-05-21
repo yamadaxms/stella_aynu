@@ -10,6 +10,32 @@
   line-height: 1.7;
 }
 
+.star-culture-list-root {
+  height: 100%;
+  overflow: hidden;
+}
+
+.star-culture-list-body {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.star-culture-list-body #site-header-include {
+  flex: 0 0 auto;
+}
+
+.star-culture-list-body .star-culture-page {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .star-culture-page-header {
   display: flex;
   align-items: flex-start;
@@ -35,6 +61,15 @@
   background: #0b1221;
   border: 1px solid #1f2933;
   border-radius: 8px;
+}
+
+.star-culture-list-body .star-culture-panel:last-child {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin-bottom: 0;
 }
 
 .star-culture-panel h3 {
@@ -194,6 +229,12 @@
   overflow-x: auto;
   border: 1px solid #1f2933;
   border-radius: 8px;
+}
+
+.star-culture-list-body .star-culture-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
 }
 
 .star-culture-table,
