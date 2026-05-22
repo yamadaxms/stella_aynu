@@ -16,7 +16,9 @@
 
   function normalizeText(value) {
     return String(value ?? "")
+      .normalize("NFKC")
       .trim()
+      .replace(/[\u3041-\u3096]/g, (char) => String.fromCharCode(char.charCodeAt(0) + 0x60))
       .toLowerCase();
   }
 
