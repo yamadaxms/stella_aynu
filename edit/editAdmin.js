@@ -7,6 +7,7 @@
   const TOKEN_KEY = "aynuEditAuth";
   const PKCE_KEY_PREFIX = "aynuEditPkce:";
   const SEARCH_DEBOUNCE_MS = 250;
+  const DELETE_ENABLED = false;
   const LIST_SORT_COLLATOR = new Intl.Collator("ja", {
     numeric: true,
     sensitivity: "base",
@@ -908,7 +909,7 @@
 
     els.editorMode.textContent = state.mode === "create" ? "新規追加" : "編集中";
     els.saveButton.disabled = false;
-    els.deleteButton.disabled = state.mode !== "edit";
+    els.deleteButton.disabled = !DELETE_ENABLED || state.mode !== "edit";
     els.cancelButton.disabled = false;
   }
 
@@ -1011,6 +1012,7 @@
   }
 
   async function deleteCurrentRow() {
+    if (!DELETE_ENABLED) return;
     if (state.mode !== "edit" || state.originalPrimaryKey === null) return;
 
     const table = getTableDefinition();
@@ -1030,7 +1032,7 @@
     } catch (err) {
       setStatus(err.message || String(err));
     } finally {
-      els.deleteButton.disabled = state.mode !== "edit";
+      els.deleteButton.disabled = !DELETE_ENABLED || state.mode !== "edit";
     }
   }
 
