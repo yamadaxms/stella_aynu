@@ -334,16 +334,24 @@
       throw new Error("認証トークンを取得できませんでした");
     }
 
-    const res = await fetch(pathOrUrl, {
-      ...options,
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${bearerToken}`,
-        ...(options.body ? { "Content-Type": "application/json" } : {}),
-        ...(options.headers || {}),
-      },
-      cache: "no-store",
-    });
+    let res;
+    try {
+      res = await fetch(pathOrUrl, {
+        ...options,
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${bearerToken}`,
+          ...(options.body ? { "Content-Type": "application/json" } : {}),
+          ...(options.headers || {}),
+        },
+        cache: "no-store",
+      });
+    } catch (err) {
+      const url = pathOrUrl?.href || String(pathOrUrl);
+      throw new Error(
+        `APIに接続できませんでした。API GatewayのCORS設定、OPTIONSリクエスト、adminルートのデプロイ状態を確認してください。接続先: ${url}`,
+      );
+    }
 
     let body = {};
     try {
