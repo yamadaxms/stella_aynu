@@ -2,14 +2,12 @@
   const currentPageUrl = window.location.href.split(/[?#]/)[0];
 
   window.AYNU_EDIT_CONFIG = {
-    apiBaseUrl:
-      window.AYNU_API_BASE_URL ||
-      "https://b43aedz221.execute-api.ap-northeast-1.amazonaws.com",
+    apiBaseUrl: window.AYNU_API_BASE_URL || "https://b43aedz221.execute-api.ap-northeast-1.amazonaws.com",
     adminApiPath: "/api/admin/tables",
     auth: {
       region: "ap-northeast-1",
-      cognitoDomain: "",
-      clientId: "",
+      cognitoDomain: "https://cognito-idp.ap-northeast-1.amazonaws.com/ap-northeast-1_TrcWTrR0A",
+      clientId: "7sp6htb7pr10pbltfsv4giu6ag",
       tokenUse: "accessToken",
       redirectUri: currentPageUrl,
       logoutUri: currentPageUrl,
