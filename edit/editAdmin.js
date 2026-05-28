@@ -461,6 +461,7 @@
 
   function getListSortColumns(table) {
     if (table.name === "astro_master") return ["astro_cd", "astro_name"];
+    if (table.name === "source_list") return ["source_cd", "source_name"];
     return [table.primaryKey];
   }
 
