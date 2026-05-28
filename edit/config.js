@@ -6,7 +6,7 @@
     adminApiPath: "/api/admin/tables",
     auth: {
       region: "ap-northeast-1",
-      cognitoDomain: "https://aynu-edit-auth.auth.ap-northeast-1.amazoncognito.com",
+      cognitoDomain: "https://cognito-idp.ap-northeast-1.amazonaws.com/ap-northeast-1_TrcWTrR0A",
       clientId: "7sp6htb7pr10pbltfsv4giu6ag",
       tokenUse: "accessToken",
       redirectUri: currentPageUrl,
