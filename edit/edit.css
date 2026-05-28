@@ -267,6 +267,7 @@ textarea:focus-visible {
 
 .search-field input,
 .editor-field input,
+.editor-field select,
 .editor-field textarea {
   width: 100%;
   min-height: 2.25rem;
@@ -284,6 +285,7 @@ textarea:focus-visible {
 }
 
 .editor-field input[readonly],
+.editor-field select[disabled],
 .editor-field textarea[readonly] {
   background: #111217;
   color: var(--muted);

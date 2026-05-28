@@ -2,6 +2,7 @@
   const CONFIG = window.AYNU_EDIT_CONFIG || {};
   const API_BASE_URL = String(CONFIG.apiBaseUrl || "").replace(/\/$/, "");
   const ADMIN_API_PATH = CONFIG.adminApiPath || "/api/admin/tables";
+  const ADMIN_OPTIONS_PATH = CONFIG.adminOptionsPath || `${ADMIN_API_PATH}/_options`;
   const AUTH = CONFIG.auth || {};
   const TOKEN_KEY = "aynuEditAuth";
   const PKCE_KEY_PREFIX = "aynuEditPkce:";
@@ -29,7 +30,7 @@
       listColumns: ["source_name", "source_cd", "author", "publication_date", "is_published"],
       columns: [
         { name: "source_name", label: "出典名", type: "text", required: true, maxLength: 32 },
-        { name: "source_cd", label: "出典区分", type: "text", required: true, maxLength: 1 },
+        { name: "source_cd", label: "出典区分", type: "select", lookup: "source_cd", required: true, maxLength: 1 },
         { name: "source_detail", label: "出典詳細", type: "textarea" },
         { name: "detail_flg", label: "詳細あり", type: "boolean", default: false },
         { name: "publisher", label: "出版社", type: "text", maxLength: 32 },
@@ -50,7 +51,7 @@
       listColumns: ["astro_name", "astro_cd", "constellation", "memo"],
       columns: [
         { name: "astro_name", label: "天体名", type: "text", required: true, maxLength: 32 },
-        { name: "astro_cd", label: "天体区分", type: "text", required: true, maxLength: 1 },
+        { name: "astro_cd", label: "天体区分", type: "select", lookup: "astro_cd", required: true, maxLength: 1 },
         { name: "constellation", label: "星座", type: "text", required: true, maxLength: 16 },
         { name: "memo", label: "メモ", type: "textarea" },
       ],
@@ -86,6 +87,7 @@
     originalPrimaryKey: null,
     mode: "idle",
     query: "",
+    lookups: {},
     loading: false,
   };
 
@@ -321,6 +323,10 @@
     return url;
   }
 
+  function buildAdminOptionsUrl() {
+    return new URL(`${API_BASE_URL}${ADMIN_OPTIONS_PATH}`, window.location.origin);
+  }
+
   async function apiRequest(pathOrUrl, options = {}) {
     const session = getValidSession();
     if (!session) {
@@ -409,8 +415,31 @@
   function formatCellValue(column, value) {
     if (column?.type === "boolean") return value ? "公開" : "非公開";
     if (column?.type === "datetime") return formatDateTime(value);
+    if (column?.type === "select") {
+      const option = findLookupOption(column, value);
+      if (option) return `${option.value}: ${option.label}`;
+    }
     if (value === null || value === undefined || value === "") return "-";
     return String(value);
+  }
+
+  function getLookupKey(column) {
+    return column.lookup || column.name;
+  }
+
+  function getLookupOptions(column) {
+    return state.lookups[getLookupKey(column)] || [];
+  }
+
+  function findLookupOption(column, value) {
+    const text = String(value ?? "");
+    if (!text) return null;
+    return getLookupOptions(column).find((option) => String(option.value) === text) || null;
+  }
+
+  async function loadLookupOptions() {
+    const data = await apiRequest(buildAdminOptionsUrl());
+    state.lookups = data?.options || {};
   }
 
   function appendCell(rowEl, column, value) {
@@ -551,6 +580,46 @@
       checkWrap.appendChild(input);
       checkWrap.append(document.createTextNode(column.label));
       wrapper.appendChild(checkWrap);
+      return wrapper;
+    }
+
+    if (column.type === "select") {
+      const select = document.createElement("select");
+      const currentValue = String(value ?? "");
+      const options = getLookupOptions(column);
+      select.id = `field-${column.name}`;
+      select.name = column.name;
+      select.required = Boolean(column.required);
+
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "選択してください";
+      placeholder.selected = currentValue === "";
+      select.appendChild(placeholder);
+
+      options.forEach((option) => {
+        const optionEl = document.createElement("option");
+        optionEl.value = option.value;
+        optionEl.textContent = `${option.value}: ${option.label}`;
+        optionEl.selected = String(option.value) === currentValue;
+        select.appendChild(optionEl);
+      });
+
+      if (currentValue && !options.some((option) => String(option.value) === currentValue)) {
+        const unknownOption = document.createElement("option");
+        unknownOption.value = currentValue;
+        unknownOption.textContent = `${currentValue}: マスタ未登録`;
+        unknownOption.selected = true;
+        select.appendChild(unknownOption);
+      }
+
+      wrapper.appendChild(select);
+      if (options.length === 0) {
+        const help = document.createElement("p");
+        help.className = "field-help";
+        help.textContent = "コードマスタの選択肢を取得できていません。";
+        wrapper.appendChild(help);
+      }
       return wrapper;
     }
 
@@ -754,7 +823,16 @@
     }
 
     if (renderAuthState()) {
-      loadRows();
+      let lookupError = null;
+      try {
+        await loadLookupOptions();
+      } catch (err) {
+        lookupError = err;
+      }
+      await loadRows();
+      if (lookupError) {
+        setStatus(`コードマスタの読み込みに失敗しました。${lookupError.message || String(lookupError)}`);
+      }
     }
   });
 })();
