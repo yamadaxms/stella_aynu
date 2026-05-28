@@ -85,7 +85,6 @@
         { name: "name_ja", label: "名称", type: "text", required: true, maxLength: 32 },
         { name: "name_en", label: "英字表記", type: "text", maxLength: 64 },
         { name: "meaning", label: "意味", type: "text", maxLength: 64 },
-        { name: "constellation_key", label: "星座線キー", type: "select", lookup: "constellation_key", maxLength: 32 },
         { name: "original_name_ja", label: "アイヌ語名称", type: "text", required: true, maxLength: 32 },
         { name: "original_name_en", label: "アイヌ語英字表記", type: "text", maxLength: 64 },
         { name: "original_meaning", label: "アイヌ語原義", type: "text", maxLength: 64 },
