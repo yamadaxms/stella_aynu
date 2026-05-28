@@ -12,7 +12,89 @@
     sensitivity: "base",
   });
 
+  const STAR_CULTURE_LINKS = [
+    {
+      key: "astro",
+      label: "星文化天体リンク",
+      addLabel: "天体を追加",
+      fields: [
+        { name: "astro_name", label: "天体名", type: "select", lookup: "astro_name", required: true },
+        { name: "memo", label: "メモ", type: "text" },
+      ],
+    },
+    {
+      key: "source",
+      label: "星文化出典リンク",
+      addLabel: "出典を追加",
+      fields: [
+        { name: "source_name", label: "出典名", type: "select", lookup: "source_name", required: true },
+        { name: "page_num", label: "ページ番号", type: "integer" },
+        { name: "memo", label: "メモ", type: "text" },
+      ],
+    },
+    {
+      key: "tradition",
+      label: "星文化伝承リンク",
+      addLabel: "伝承を追加",
+      fields: [
+        { name: "tradition_title", label: "伝承タイトル", type: "select", lookup: "tradition_title", required: true },
+        { name: "memo", label: "メモ", type: "text" },
+      ],
+    },
+    {
+      key: "tradition_source",
+      label: "伝承出典リンク",
+      addLabel: "伝承出典を追加",
+      fields: [
+        { name: "tradition_title", label: "伝承タイトル", type: "select", lookup: "tradition_title", required: true },
+        { name: "source_name", label: "出典名", type: "select", lookup: "source_name", required: true },
+        { name: "page_num", label: "ページ番号", type: "integer" },
+        { name: "memo", label: "メモ", type: "text" },
+      ],
+    },
+    {
+      key: "area",
+      label: "星文化地域リンク",
+      addLabel: "地域を追加",
+      fields: [
+        { name: "area_name", label: "地域名", type: "select", lookup: "area_name", required: true },
+        { name: "memo", label: "メモ", type: "text" },
+      ],
+    },
+    {
+      key: "word",
+      label: "星文化単語リンク",
+      addLabel: "単語を追加",
+      fields: [
+        { name: "word_order", label: "単語順", type: "integer", required: true },
+        { name: "word_ja", label: "単語", type: "select", lookup: "word_ja", required: true },
+        { name: "memo", label: "メモ", type: "text" },
+      ],
+    },
+  ];
+
   const TABLES = [
+    {
+      name: "star_culture",
+      label: "星文化情報",
+      primaryKey: "star_culture_id",
+      listColumns: ["star_culture_id", "name_ja", "meaning", "is_published"],
+      relatedLinks: STAR_CULTURE_LINKS,
+      columns: [
+        { name: "star_culture_id", label: "星文化ID", type: "integer", required: true },
+        { name: "name_ja", label: "名称", type: "text", required: true, maxLength: 32 },
+        { name: "name_en", label: "英字表記", type: "text", maxLength: 64 },
+        { name: "meaning", label: "意味", type: "text", maxLength: 64 },
+        { name: "constellation_key", label: "星座線キー", type: "select", lookup: "constellation_key", maxLength: 32 },
+        { name: "original_name_ja", label: "アイヌ語名称", type: "text", required: true, maxLength: 32 },
+        { name: "original_name_en", label: "アイヌ語英字表記", type: "text", maxLength: 64 },
+        { name: "original_meaning", label: "アイヌ語原義", type: "text", maxLength: 64 },
+        { name: "memo", label: "メモ", type: "textarea" },
+        { name: "is_published", label: "公開", type: "boolean", required: true, default: false },
+        { name: "created_at", label: "作成日時", type: "datetime", readonly: true },
+        { name: "updated_at", label: "更新日時", type: "datetime", readonly: true },
+      ],
+    },
     {
       name: "tradition_list",
       label: "伝承リスト",
@@ -93,6 +175,7 @@
     mode: "idle",
     query: "",
     lookups: {},
+    relatedLinks: {},
     loading: false,
     loadRequestId: 0,
   };
@@ -106,6 +189,24 @@
 
   function getColumnDefinition(table, name) {
     return table.columns.find((column) => column.name === name);
+  }
+
+  function createEmptyRelatedLinks(table = getTableDefinition()) {
+    const links = {};
+    (table.relatedLinks || []).forEach((config) => {
+      links[config.key] = [];
+    });
+    return links;
+  }
+
+  function normalizeRelatedLinks(table, links) {
+    const normalized = createEmptyRelatedLinks(table);
+    (table.relatedLinks || []).forEach((config) => {
+      normalized[config.key] = Array.isArray(links?.[config.key])
+        ? links[config.key].map((row) => ({ ...(row || {}) }))
+        : [];
+    });
+    return normalized;
   }
 
   function setText(id, value) {
@@ -460,6 +561,7 @@
   }
 
   function getListSortColumns(table) {
+    if (table.name === "star_culture") return ["star_culture_id"];
     if (table.name === "astro_master") return ["astro_cd", "astro_name"];
     if (table.name === "source_list") return ["source_cd", "source_name"];
     return [table.primaryKey];
@@ -541,7 +643,7 @@
       if (state.selectedPrimaryKey !== null) {
         const selected = state.rows.find((row) => String(row[table.primaryKey]) === String(state.selectedPrimaryKey));
         if (selected) {
-          selectRow(selected, { skipRenderRows: true });
+          await selectRow(selected, { skipRenderRows: true });
         } else {
           clearEditor();
         }
@@ -560,6 +662,7 @@
     state.selectedPrimaryKey = null;
     state.originalPrimaryKey = null;
     state.mode = "idle";
+    state.relatedLinks = {};
     els.editorMode.textContent = "未選択";
     els.editorFields.textContent = "";
     els.saveButton.disabled = true;
@@ -648,7 +751,8 @@
     if (column.maxLength) input.maxLength = column.maxLength;
 
     if (input.tagName === "INPUT") {
-      input.type = column.type === "date" ? "date" : column.type === "url" ? "url" : "text";
+      input.type = column.type === "date" ? "date" : column.type === "url" ? "url" : column.type === "integer" ? "number" : "text";
+      if (column.type === "integer") input.step = "1";
     }
 
     input.value = value ?? "";
@@ -657,12 +761,150 @@
     return wrapper;
   }
 
+  function collectEditorRowSnapshot() {
+    const table = getTableDefinition();
+    const row = {};
+    table.columns.forEach((column) => {
+      if (column.readonly) return;
+      if (state.mode === "edit" && column.name === table.primaryKey) {
+        row[column.name] = state.originalPrimaryKey;
+        return;
+      }
+      const input = els.editorForm.elements[column.name];
+      if (!input) return;
+      row[column.name] = column.type === "boolean" ? input.checked : input.value;
+    });
+    return row;
+  }
+
+  function updateRelatedValue(config, rowIndex, fieldName, value) {
+    const rows = state.relatedLinks[config.key] || [];
+    if (!rows[rowIndex]) rows[rowIndex] = {};
+    rows[rowIndex][fieldName] = value;
+    state.relatedLinks[config.key] = rows;
+  }
+
+  function createRelatedField(config, rowIndex, field, row) {
+    const wrapper = document.createElement("label");
+    wrapper.className = "related-field";
+
+    const label = document.createElement("span");
+    label.textContent = `${field.label}${field.required ? " *" : ""}`;
+    wrapper.appendChild(label);
+
+    const currentValue = row?.[field.name] ?? "";
+    let input;
+    if (field.type === "select") {
+      input = document.createElement("select");
+      input.required = Boolean(field.required);
+
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "選択してください";
+      placeholder.selected = String(currentValue) === "";
+      input.appendChild(placeholder);
+
+      getLookupOptions(field).forEach((option) => {
+        const optionEl = document.createElement("option");
+        optionEl.value = option.value;
+        optionEl.textContent = option.value === option.label ? option.label : `${option.value}: ${option.label}`;
+        optionEl.selected = String(option.value) === String(currentValue);
+        input.appendChild(optionEl);
+      });
+    } else {
+      input = document.createElement("input");
+      input.type = field.type === "integer" ? "number" : "text";
+      if (field.type === "integer") input.step = "1";
+      input.required = Boolean(field.required);
+      input.value = currentValue ?? "";
+    }
+
+    input.name = `link-${config.key}-${rowIndex}-${field.name}`;
+    input.addEventListener("input", () => updateRelatedValue(config, rowIndex, field.name, input.value));
+    input.addEventListener("change", () => updateRelatedValue(config, rowIndex, field.name, input.value));
+    wrapper.appendChild(input);
+    return wrapper;
+  }
+
+  function rerenderEditorWithRelatedChange(mutator) {
+    const snapshot = collectEditorRowSnapshot();
+    mutator();
+    renderEditor(snapshot);
+  }
+
+  function createRelatedSection(config) {
+    const section = document.createElement("section");
+    section.className = "related-section";
+
+    const header = document.createElement("div");
+    header.className = "related-header";
+
+    const heading = document.createElement("h3");
+    heading.textContent = config.label;
+    header.appendChild(heading);
+
+    const addButton = document.createElement("button");
+    addButton.type = "button";
+    addButton.className = "button button-muted";
+    addButton.textContent = config.addLabel || "追加";
+    addButton.addEventListener("click", () => {
+      rerenderEditorWithRelatedChange(() => {
+        state.relatedLinks[config.key] = [...(state.relatedLinks[config.key] || []), {}];
+      });
+    });
+    header.appendChild(addButton);
+    section.appendChild(header);
+
+    const rows = state.relatedLinks[config.key] || [];
+    if (rows.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "related-empty";
+      empty.textContent = "登録なし";
+      section.appendChild(empty);
+      return section;
+    }
+
+    rows.forEach((row, rowIndex) => {
+      const rowEl = document.createElement("div");
+      rowEl.className = "related-row";
+      config.fields.forEach((field) => {
+        rowEl.appendChild(createRelatedField(config, rowIndex, field, row));
+      });
+
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "button button-danger related-delete";
+      deleteButton.textContent = "削除";
+      deleteButton.addEventListener("click", () => {
+        rerenderEditorWithRelatedChange(() => {
+          state.relatedLinks[config.key] = (state.relatedLinks[config.key] || []).filter((_, index) => index !== rowIndex);
+        });
+      });
+      rowEl.appendChild(deleteButton);
+      section.appendChild(rowEl);
+    });
+
+    return section;
+  }
+
+  function renderRelatedEditor(table) {
+    if (!table.relatedLinks) return;
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "related-editor";
+    table.relatedLinks.forEach((config) => {
+      wrapper.appendChild(createRelatedSection(config));
+    });
+    els.editorFields.appendChild(wrapper);
+  }
+
   function renderEditor(row = {}) {
     const table = getTableDefinition();
     els.editorFields.textContent = "";
     table.columns.forEach((column) => {
       els.editorFields.appendChild(createField(column, row[column.name]));
     });
+    renderRelatedEditor(table);
 
     els.editorMode.textContent = state.mode === "create" ? "新規追加" : "編集中";
     els.saveButton.disabled = false;
@@ -675,6 +917,7 @@
     state.mode = "create";
     state.selectedPrimaryKey = null;
     state.originalPrimaryKey = null;
+    state.relatedLinks = createEmptyRelatedLinks(table);
     const row = {};
     table.columns.forEach((column) => {
       if (column.default !== undefined) row[column.name] = column.default;
@@ -683,14 +926,27 @@
     renderRows();
   }
 
-  function selectRow(row, { skipRenderRows = false } = {}) {
+  async function selectRow(row, { skipRenderRows = false } = {}) {
     const table = getTableDefinition();
     const pk = row[table.primaryKey];
     state.mode = "edit";
     state.selectedPrimaryKey = pk;
     state.originalPrimaryKey = pk;
+    state.relatedLinks = normalizeRelatedLinks(table, row.links);
     renderEditor(row);
     if (!skipRenderRows) renderRows();
+
+    if (!table.relatedLinks) return;
+
+    try {
+      const data = await apiRequest(buildAdminUrl(table.name, { pk }));
+      if (state.tableName !== table.name || String(state.originalPrimaryKey) !== String(pk)) return;
+      const detailRow = data.row || row;
+      state.relatedLinks = normalizeRelatedLinks(table, detailRow.links);
+      renderEditor(detailRow);
+    } catch (err) {
+      setStatus(err.message || String(err));
+    }
   }
 
   function collectFormData() {
@@ -703,6 +959,18 @@
       if (!input) return;
       data[column.name] = column.type === "boolean" ? input.checked : input.value;
     });
+    if (table.relatedLinks) {
+      data.links = {};
+      table.relatedLinks.forEach((config) => {
+        data.links[config.key] = (state.relatedLinks[config.key] || []).map((row) => {
+          const item = {};
+          config.fields.forEach((field) => {
+            item[field.name] = row?.[field.name] ?? "";
+          });
+          return item;
+        });
+      });
+    }
     return data;
   }
 
