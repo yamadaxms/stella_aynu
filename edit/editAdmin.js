@@ -6,13 +6,18 @@
   const AUTH = CONFIG.auth || {};
   const TOKEN_KEY = "aynuEditAuth";
   const PKCE_KEY_PREFIX = "aynuEditPkce:";
+  const SEARCH_DEBOUNCE_MS = 250;
+  const LIST_SORT_COLLATOR = new Intl.Collator("ja", {
+    numeric: true,
+    sensitivity: "base",
+  });
 
   const TABLES = [
     {
       name: "tradition_list",
       label: "伝承リスト",
       primaryKey: "tradition_title",
-      listColumns: ["tradition_title", "tradition_area", "is_published", "updated_at"],
+      listColumns: ["tradition_title", "tradition_area", "is_published"],
       columns: [
         { name: "tradition_title", label: "伝承タイトル", type: "text", required: true, maxLength: 64 },
         { name: "tradition_content", label: "伝承内容", type: "textarea" },
@@ -32,16 +37,26 @@
         { name: "source_name", label: "出典名", type: "text", required: true, maxLength: 32 },
         { name: "source_cd", label: "出典区分", type: "select", lookup: "source_cd", required: true, maxLength: 1 },
         { name: "source_detail", label: "出典詳細", type: "textarea" },
-        { name: "detail_flg", label: "詳細あり", type: "boolean", default: false },
+        { name: "detail_flg", label: "出典詳細公開", type: "boolean", default: false },
         { name: "publisher", label: "出版社", type: "text", maxLength: 32 },
-        { name: "author", label: "著者", type: "text", maxLength: 32 },
-        { name: "publication_date", label: "発行日", type: "date" },
-        { name: "publication_area", label: "発行地", type: "text", maxLength: 16 },
+        { name: "author", label: "著者/採取者", type: "text", maxLength: 32 },
+        { name: "publication_date", label: "発行/採集年月日", type: "date" },
+        { name: "publication_area", label: "採集地域", type: "text", maxLength: 16 },
         { name: "url", label: "URL", type: "url" },
         { name: "memo", label: "メモ", type: "textarea" },
         { name: "is_published", label: "公開", type: "boolean", default: false },
         { name: "created_at", label: "作成日時", type: "datetime", readonly: true },
         { name: "updated_at", label: "更新日時", type: "datetime", readonly: true },
+      ],
+    },
+    {
+      name: "area_list",
+      label: "地域リスト",
+      primaryKey: "area_name",
+      listColumns: ["area_name", "memo"],
+      columns: [
+        { name: "area_name", label: "地域名", type: "text", required: true, maxLength: 32 },
+        { name: "memo", label: "メモ", type: "textarea" },
       ],
     },
     {
@@ -53,16 +68,6 @@
         { name: "astro_name", label: "天体名", type: "text", required: true, maxLength: 32 },
         { name: "astro_cd", label: "天体区分", type: "select", lookup: "astro_cd", required: true, maxLength: 1 },
         { name: "constellation", label: "星座", type: "text", required: true, maxLength: 16 },
-        { name: "memo", label: "メモ", type: "textarea" },
-      ],
-    },
-    {
-      name: "area_list",
-      label: "地域リスト",
-      primaryKey: "area_name",
-      listColumns: ["area_name", "memo"],
-      columns: [
-        { name: "area_name", label: "地域名", type: "text", required: true, maxLength: 32 },
         { name: "memo", label: "メモ", type: "textarea" },
       ],
     },
@@ -89,9 +94,11 @@
     query: "",
     lookups: {},
     loading: false,
+    loadRequestId: 0,
   };
 
   const els = {};
+  let searchTimer = 0;
 
   function getTableDefinition(name = state.tableName) {
     return TABLES.find((table) => table.name === name) || TABLES[0];
@@ -311,10 +318,7 @@
   }
 
   function buildAdminUrl(tableName, params = {}) {
-    const url = new URL(
-      `${API_BASE_URL}${ADMIN_API_PATH}/${encodeURIComponent(tableName)}`,
-      window.location.origin,
-    );
+    const url = new URL(`${API_BASE_URL}${ADMIN_API_PATH}/${encodeURIComponent(tableName)}`, window.location.origin);
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== "") {
         url.searchParams.set(key, value);
@@ -354,9 +358,7 @@
       });
     } catch (err) {
       const url = pathOrUrl?.href || String(pathOrUrl);
-      throw new Error(
-        `APIに接続できませんでした。API GatewayのCORS設定、OPTIONSリクエスト、adminルートのデプロイ状態を確認してください。接続先: ${url}`,
-      );
+      throw new Error(`APIに接続できませんでした。API GatewayのCORS設定、OPTIONSリクエスト、adminルートのデプロイ状態を確認してください。接続先: ${url}`);
     }
 
     let body = {};
@@ -457,11 +459,22 @@
     rowEl.appendChild(cell);
   }
 
+  function getListSortColumns(table) {
+    if (table.name === "astro_master") return ["astro_cd", "astro_name"];
+    return [table.primaryKey];
+  }
+
+  function compareListRows(table, a, b) {
+    for (const columnName of getListSortColumns(table)) {
+      const result = LIST_SORT_COLLATOR.compare(String(a?.[columnName] ?? ""), String(b?.[columnName] ?? ""));
+      if (result !== 0) return result;
+    }
+    return 0;
+  }
+
   function renderRows() {
     const table = getTableDefinition();
-    const columns = table.listColumns
-      .map((name) => getColumnDefinition(table, name))
-      .filter(Boolean);
+    const columns = table.listColumns.map((name) => getColumnDefinition(table, name)).filter(Boolean);
 
     els.dataHead.textContent = "";
     const headRow = document.createElement("tr");
@@ -506,10 +519,11 @@
 
   async function loadRows() {
     const table = getTableDefinition();
+    const requestId = state.loadRequestId + 1;
+    state.loadRequestId = requestId;
     setStatus("");
     setLoading(true);
     setText("listHeading", table.label);
-    setText("activeTableKey", table.name);
 
     try {
       const data = await apiRequest(
@@ -519,7 +533,8 @@
           offset: 0,
         }),
       );
-      state.rows = Array.isArray(data.rows) ? data.rows : [];
+      if (requestId !== state.loadRequestId) return;
+      state.rows = (Array.isArray(data.rows) ? data.rows : []).slice().sort((a, b) => compareListRows(table, a, b));
       renderRows();
 
       if (state.selectedPrimaryKey !== null) {
@@ -531,11 +546,12 @@
         }
       }
     } catch (err) {
+      if (requestId !== state.loadRequestId) return;
       state.rows = [];
       renderRows();
       setStatus(err.message || String(err));
     } finally {
-      setLoading(false);
+      if (requestId === state.loadRequestId) setLoading(false);
     }
   }
 
@@ -623,10 +639,7 @@
       return wrapper;
     }
 
-    const input =
-      column.type === "textarea"
-        ? document.createElement("textarea")
-        : document.createElement("input");
+    const input = column.type === "textarea" ? document.createElement("textarea") : document.createElement("input");
     input.id = `field-${column.name}`;
     input.name = column.name;
     input.required = Boolean(column.required);
@@ -756,6 +769,19 @@
     }
   }
 
+  function runSearch() {
+    const nextQuery = els.searchInput.value.trim();
+    if (state.query === nextQuery) return;
+    state.query = nextQuery;
+    clearEditor();
+    loadRows();
+  }
+
+  function scheduleSearch() {
+    window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(runSearch, SEARCH_DEBOUNCE_MS);
+  }
+
   function bindElements() {
     Object.assign(els, {
       authPanel: document.getElementById("auth-panel"),
@@ -766,7 +792,6 @@
       logoutButton: document.getElementById("logout-button"),
       tableNav: document.getElementById("table-nav"),
       listHeading: document.getElementById("list-heading"),
-      activeTableKey: document.getElementById("active-table-key"),
       newRowButton: document.getElementById("new-row-button"),
       reloadButton: document.getElementById("reload-button"),
       searchForm: document.getElementById("search-form"),
@@ -798,16 +823,23 @@
 
     els.searchForm.addEventListener("submit", (event) => {
       event.preventDefault();
-      state.query = els.searchInput.value.trim();
-      clearEditor();
-      loadRows();
+      window.clearTimeout(searchTimer);
+      runSearch();
     });
 
+    els.searchInput.addEventListener("input", scheduleSearch);
+
     els.clearSearchButton.addEventListener("click", () => {
+      window.clearTimeout(searchTimer);
+      if (!els.searchInput.value && !state.query) {
+        els.searchInput.focus();
+        return;
+      }
       els.searchInput.value = "";
       state.query = "";
       clearEditor();
       loadRows();
+      els.searchInput.focus();
     });
   }
 

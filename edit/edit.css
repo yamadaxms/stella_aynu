@@ -251,7 +251,7 @@ textarea:focus-visible {
 
 .search-form {
   display: grid;
-  grid-template-columns: minmax(12rem, 1fr) auto auto;
+  grid-template-columns: minmax(12rem, 1fr) auto;
   gap: 0.5rem;
   align-items: end;
   margin-bottom: 0.65rem;
