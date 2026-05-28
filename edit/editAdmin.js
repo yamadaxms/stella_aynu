@@ -78,10 +78,10 @@
       name: "star_culture",
       label: "星文化情報",
       primaryKey: "star_culture_id",
-      listColumns: ["star_culture_id", "name_ja", "meaning", "is_published"],
+      listColumns: ["name_ja", "name_en", "meaning", "is_published"],
       relatedLinks: STAR_CULTURE_LINKS,
       columns: [
-        { name: "star_culture_id", label: "星文化ID", type: "integer", required: true },
+        { name: "star_culture_id", label: "星文化ID", type: "integer", autoSequence: true },
         { name: "name_ja", label: "名称", type: "text", required: true, maxLength: 32 },
         { name: "name_en", label: "英字表記", type: "text", maxLength: 64 },
         { name: "meaning", label: "意味", type: "text", maxLength: 64 },
@@ -901,6 +901,7 @@
     const table = getTableDefinition();
     els.editorFields.textContent = "";
     table.columns.forEach((column) => {
+      if (state.mode === "create" && column.autoSequence) return;
       els.editorFields.appendChild(createField(column, row[column.name]));
     });
     renderRelatedEditor(table);
@@ -953,6 +954,7 @@
     const data = {};
     table.columns.forEach((column) => {
       if (column.readonly) return;
+      if (state.mode === "create" && column.autoSequence) return;
       if (state.mode === "edit" && column.name === table.primaryKey) return;
       const input = els.editorForm.elements[column.name];
       if (!input) return;
