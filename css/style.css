@@ -147,6 +147,10 @@ body::after {
   background: #0b1221; /* 背景色で浮かせる */
 }
 
+.utility-nav-admin {
+  margin-left: auto;
+}
+
 /* 現在ページの強調（ARIA属性で判定） */
 .utility-nav a[aria-current="page"] {
   border-color: #66ccff; /* 現在ページを強調 */
