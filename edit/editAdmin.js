@@ -23,7 +23,7 @@
         { name: "tradition_content", label: "伝承内容", type: "textarea" },
         { name: "tradition_area", label: "伝承地域", type: "text", maxLength: 16 },
         { name: "memo", label: "メモ", type: "textarea" },
-        { name: "is_published", label: "公開", type: "boolean", default: false },
+        { name: "is_published", label: "公開", type: "boolean", required: true, default: false },
         { name: "created_at", label: "作成日時", type: "datetime", readonly: true },
         { name: "updated_at", label: "更新日時", type: "datetime", readonly: true },
       ],
@@ -37,14 +37,14 @@
         { name: "source_name", label: "出典名", type: "text", required: true, maxLength: 32 },
         { name: "source_cd", label: "出典区分", type: "select", lookup: "source_cd", required: true, maxLength: 1 },
         { name: "source_detail", label: "出典詳細", type: "textarea" },
-        { name: "detail_flg", label: "出典詳細公開", type: "boolean", default: false },
+        { name: "detail_flg", label: "出典詳細公開", type: "boolean", required: true, default: false },
         { name: "publisher", label: "出版社", type: "text", maxLength: 32 },
         { name: "author", label: "著者/採取者", type: "text", maxLength: 32 },
         { name: "publication_date", label: "発行/採集年月日", type: "date" },
         { name: "publication_area", label: "採集地域", type: "text", maxLength: 16 },
         { name: "url", label: "URL", type: "url" },
         { name: "memo", label: "メモ", type: "textarea" },
-        { name: "is_published", label: "公開", type: "boolean", default: false },
+        { name: "is_published", label: "公開", type: "boolean", required: true, default: false },
         { name: "created_at", label: "作成日時", type: "datetime", readonly: true },
         { name: "updated_at", label: "更新日時", type: "datetime", readonly: true },
       ],
@@ -571,6 +571,7 @@
   function createField(column, value) {
     const wrapper = document.createElement("div");
     wrapper.className = "editor-field";
+    const isPrimaryKeyInEdit = column.name === getTableDefinition().primaryKey && state.mode === "edit";
 
     const label = document.createElement("label");
     label.className = "field-label";
@@ -578,7 +579,7 @@
     label.htmlFor = `field-${column.name}`;
     wrapper.appendChild(label);
 
-    if (column.readonly) {
+    if (column.readonly || isPrimaryKeyInEdit) {
       const readonly = document.createElement("p");
       readonly.className = "readonly-value";
       readonly.textContent = formatCellValue(column, value);
@@ -653,13 +654,6 @@
     input.value = value ?? "";
     wrapper.appendChild(input);
 
-    if (column.name === getTableDefinition().primaryKey && state.mode === "edit") {
-      const help = document.createElement("p");
-      help.className = "field-help";
-      help.textContent = "主キー変更は関連リンクに影響します。";
-      wrapper.appendChild(help);
-    }
-
     return wrapper;
   }
 
@@ -704,6 +698,7 @@
     const data = {};
     table.columns.forEach((column) => {
       if (column.readonly) return;
+      if (state.mode === "edit" && column.name === table.primaryKey) return;
       const input = els.editorForm.elements[column.name];
       if (!input) return;
       data[column.name] = column.type === "boolean" ? input.checked : input.value;
