@@ -8,6 +8,7 @@
   const PKCE_KEY_PREFIX = "aynuEditPkce:";
   const SEARCH_DEBOUNCE_MS = 250;
   const DELETE_ENABLED = false;
+  const JST_TIME_ZONE = "Asia/Tokyo";
   const LIST_SORT_COLLATOR = new Intl.Collator("ja", {
     numeric: true,
     sensitivity: "base",
@@ -149,7 +150,7 @@
       columns: [
         { name: "astro_name", label: "天体名", type: "text", required: true, maxLength: 32 },
         { name: "astro_cd", label: "天体区分", type: "select", lookup: "astro_cd", required: true, maxLength: 1 },
-        { name: "constellation", label: "星座", type: "text", required: true, maxLength: 16 },
+        { name: "constellation", label: "星座", type: "text", nullable: true, maxLength: 16 },
         { name: "memo", label: "メモ", type: "textarea" },
       ],
     },
@@ -504,15 +505,30 @@
 
   function formatDateTime(value) {
     if (!value) return "";
+    const storedTimestamp = getStoredTimestampText(value);
+    if (storedTimestamp) return storedTimestamp;
+
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return String(value);
     return date.toLocaleString("ja-JP", {
+      timeZone: JST_TIME_ZONE,
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
     });
+  }
+
+  function getStoredTimestampText(value) {
+    if (value instanceof Date) return "";
+    const text = String(value);
+    const hasTimeZone = /(?:z|[+-]\d{2}:?\d{2})$/i.test(text);
+    if (hasTimeZone) return "";
+
+    const match = text.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/);
+    if (!match) return "";
+    return `${match[1]}/${match[2]}/${match[3]} ${match[4]}:${match[5]}`;
   }
 
   function formatCellValue(column, value) {
@@ -959,7 +975,7 @@
       if (state.mode === "edit" && column.name === table.primaryKey) return;
       const input = els.editorForm.elements[column.name];
       if (!input) return;
-      data[column.name] = column.type === "boolean" ? input.checked : input.value;
+      data[column.name] = column.type === "boolean" ? input.checked : normalizeFormValue(column, input.value);
     });
     if (table.relatedLinks) {
       data.links = {};
@@ -974,6 +990,11 @@
       });
     }
     return data;
+  }
+
+  function normalizeFormValue(column, value) {
+    if (column.nullable && value === "") return null;
+    return value;
   }
 
   async function saveForm(event) {
