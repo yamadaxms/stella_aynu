@@ -20,6 +20,7 @@ const AYNU_LABEL_COLOR_CONST = "#ee66ee"; // 星座色
 const AYNU_LABEL_COLOR_HIGHLIGHT = "#ffeb3b"; // 選択中の強調色（黄）
 const AYNU_LABEL_FONT = "bold 14px sans-serif";
 const AYNU_LABEL_TEXT_ALIGN = "center";
+const AYNU_LABEL_JOINER = "／";
 const DEFAULT_CITY_LOCATION = "札幌市"; // 緯度経度が欠損している場合のフォールバック先
 const PROJECTION_PLANISPHERE = "planisphere";
 const PLANISPHERE_BASE_PROJECTION = "stereographic";
@@ -1011,11 +1012,11 @@ function buildAynuGeoJSON(constellations, stars, areaKeys) {
 
   const starMap = stars || {};
   const features = [];
-  const seenFeatureIds = new Set();
+  const featureGroups = new Map();
 
   for (const c of constellations || []) {
     // 名前がない星文化は一覧・ラベルで識別できないためスキップする。
-    const name = c?.name;
+    const name = String(c?.name ?? c?.name_ja ?? "").trim();
     const desc = c?.description || "";
     if (!name) continue;
 
@@ -1061,13 +1062,24 @@ function buildAynuGeoJSON(constellations, stars, areaKeys) {
 
     const uniqueStarCount = new Set(usedPoints.map((p) => `${p[0]},${p[1]}`)).size;
 
-    const featureIdBase = c.key || name;
-    const featureId = featureIdBase || `const-${features.length}`;
-    // d3 の data join でIDをキーに使うため、重複IDは二重描画を避けてスキップする。
-    if (seenFeatureIds.has(featureId)) continue;
-    seenFeatureIds.add(featureId);
+    const constellationKey = String(c?.constellation_key ?? "").trim();
+    const fallbackKey = String(c?.key || name || `const-${features.length}`).trim();
+    const featureId = constellationKey ? `constellation:${constellationKey}` : `culture:${fallbackKey}`;
+    const existingGroup = featureGroups.get(featureId);
+    if (existingGroup) {
+      // 同じ星座線キーに複数の星文化名がある場合、星図上では1ラベルにまとめる。
+      if (!existingGroup.names.includes(name)) {
+        existingGroup.names.push(name);
+        existingGroup.feature.properties.n = existingGroup.names.join(AYNU_LABEL_JOINER);
+      }
+      if (desc && !existingGroup.descriptions.includes(desc)) {
+        existingGroup.descriptions.push(desc);
+        existingGroup.feature.properties.desc = existingGroup.descriptions.join(AYNU_LABEL_JOINER);
+      }
+      continue;
+    }
 
-    features.push({
+    const feature = {
       type: "Feature",
       id: featureId,
       properties: {
@@ -1078,7 +1090,14 @@ function buildAynuGeoJSON(constellations, stars, areaKeys) {
         starCount: uniqueStarCount,
       },
       geometry: { type: "MultiLineString", coordinates: lineSegments },
+    };
+
+    featureGroups.set(featureId, {
+      feature,
+      names: [name],
+      descriptions: desc ? [desc] : [],
     });
+    features.push(feature);
   }
 
   return { type: "FeatureCollection", features };
