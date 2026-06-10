@@ -20,7 +20,7 @@
       label: "星文化天体リンク",
       addLabel: "天体を追加",
       fields: [
-        { name: "astro_name", label: "天体名", type: "select", lookup: "astro_name", required: true },
+        { name: "astro_name", label: "天体名称", type: "select", lookup: "astro_name", required: true },
         { name: "memo", label: "メモ", type: "text" },
       ],
     },
@@ -59,7 +59,7 @@
       label: "星文化地域リンク",
       addLabel: "地域を追加",
       fields: [
-        { name: "area_name", label: "地域名", type: "select", lookup: "area_name", required: true },
+        { name: "area_name", label: "地域名称", type: "select", lookup: "area_name", required: true },
         { name: "memo", label: "メモ", type: "text" },
       ],
     },
@@ -85,11 +85,11 @@
       columns: [
         { name: "star_culture_id", label: "星文化ID", type: "integer", autoSequence: true },
         { name: "name_ja", label: "名称", type: "text", required: true, maxLength: 32 },
-        { name: "name_en", label: "英字表記", type: "text", maxLength: 64 },
+        { name: "name_en", label: "名称（英字）", type: "text", maxLength: 64 },
         { name: "meaning", label: "意味", type: "text", maxLength: 64 },
-        { name: "original_name_ja", label: "アイヌ語名称", type: "text", required: true, maxLength: 32 },
-        { name: "original_name_en", label: "アイヌ語英字表記", type: "text", maxLength: 64 },
-        { name: "original_meaning", label: "アイヌ語原義", type: "text", maxLength: 64 },
+        { name: "original_name_ja", label: "オリジナル名称", type: "text", required: true, maxLength: 32 },
+        { name: "original_name_en", label: "オリジナル名称（英字）", type: "text", maxLength: 64 },
+        { name: "original_meaning", label: "オリジナル意味", type: "text", maxLength: 64 },
         { name: "memo", label: "メモ", type: "textarea" },
         { name: "is_published", label: "公開", type: "boolean", required: true, default: false },
         { name: "created_at", label: "作成日時", type: "datetime", readonly: true },
@@ -138,7 +138,7 @@
       primaryKey: "area_name",
       listColumns: ["area_name", "memo"],
       columns: [
-        { name: "area_name", label: "地域名", type: "text", required: true, maxLength: 32 },
+        { name: "area_name", label: "地域名称", type: "text", required: true, maxLength: 32 },
         { name: "memo", label: "メモ", type: "textarea" },
       ],
     },
@@ -148,7 +148,7 @@
       primaryKey: "astro_name",
       listColumns: ["astro_name", "astro_cd", "constellation", "memo"],
       columns: [
-        { name: "astro_name", label: "天体名", type: "text", required: true, maxLength: 32 },
+        { name: "astro_name", label: "天体名称", type: "text", required: true, maxLength: 32 },
         { name: "astro_cd", label: "天体区分", type: "select", lookup: "astro_cd", required: true, maxLength: 1 },
         { name: "constellation", label: "星座", type: "text", nullable: true, maxLength: 16 },
         { name: "memo", label: "メモ", type: "textarea" },
@@ -160,8 +160,8 @@
       primaryKey: "word_ja",
       listColumns: ["word_ja", "word_en", "word_meaning", "memo"],
       columns: [
-        { name: "word_ja", label: "単語（日本語）", type: "text", required: true, maxLength: 32 },
-        { name: "word_en", label: "英字表記", type: "text", maxLength: 64 },
+        { name: "word_ja", label: "単語", type: "text", required: true, maxLength: 32 },
+        { name: "word_en", label: "単語（英字）", type: "text", maxLength: 64 },
         { name: "word_meaning", label: "意味", type: "textarea" },
         { name: "memo", label: "メモ", type: "textarea" },
       ],
