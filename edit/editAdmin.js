@@ -13,6 +13,17 @@
     numeric: true,
     sensitivity: "base",
   });
+  const AREA_LIST_PINNED_NAMES = [
+    "地域（Ⅰ）",
+    "地域（Ⅱ）",
+    "地域（Ⅲ）",
+    "地域（Ⅳ）",
+    "地域（Ⅴ）",
+    "地域不明",
+  ];
+  const AREA_LIST_PINNED_ORDER = new Map(
+    AREA_LIST_PINNED_NAMES.map((name, index) => [normalizeListSortText(name), index]),
+  );
 
   const STAR_CULTURE_LINKS = [
     {
@@ -187,6 +198,7 @@
     loadRequestId: 0,
     sortColumn: TABLES[0].defaultSort,
     sortDirection: "asc",
+    isDefaultSort: true,
   };
 
   const els = {};
@@ -504,6 +516,7 @@
         state.query = "";
         state.sortColumn = table.defaultSort || table.listColumns[0] || table.primaryKey;
         state.sortDirection = "asc";
+        state.isDefaultSort = true;
         els.searchInput.value = "";
         clearEditor();
         renderTableNav();
@@ -586,6 +599,10 @@
     rowEl.appendChild(cell);
   }
 
+  function normalizeListSortText(value) {
+    return String(value ?? "").normalize("NFKC").replace(/\s+/g, "").toLowerCase();
+  }
+
   function compareListRows(table, a, b) {
     const column = getColumnDefinition(table, state.sortColumn);
     const aValue = a?.[state.sortColumn];
@@ -594,6 +611,12 @@
     const bEmpty = bValue === null || bValue === undefined || bValue === "";
 
     if (aEmpty !== bEmpty) return aEmpty ? 1 : -1;
+
+    if (table.name === "area_list" && state.isDefaultSort && state.sortColumn === "area_name") {
+      const aRank = AREA_LIST_PINNED_ORDER.get(normalizeListSortText(aValue)) ?? Number.POSITIVE_INFINITY;
+      const bRank = AREA_LIST_PINNED_ORDER.get(normalizeListSortText(bValue)) ?? Number.POSITIVE_INFINITY;
+      if (aRank !== bRank) return aRank - bRank;
+    }
 
     let result = 0;
     if (!aEmpty) {
@@ -628,6 +651,7 @@
       button.className = "data-table-sort-button";
       button.textContent = column.label;
       button.addEventListener("click", () => {
+        state.isDefaultSort = false;
         if (state.sortColumn === column.name) {
           state.sortDirection = state.sortDirection === "asc" ? "desc" : "asc";
         } else {

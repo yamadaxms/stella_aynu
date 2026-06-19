@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <link rel="stylesheet" href="css/style.css" />
-    <link rel="stylesheet" href="css/starCulture.css?v=v057a" />
+    <link rel="stylesheet" href="css/starCulture.css?v=v057a2" />
   </head>
   <body class="star-culture-list-body">
     <div id="site-header-include"></div>
@@ -28,6 +28,11 @@
           </div>
           <fieldset class="star-culture-region-filter">
             <legend>伝承地域</legend>
+            <div class="star-culture-region-mode" role="group" aria-label="伝承地域の指定方法">
+              <span>指定方法</span>
+              <label><input type="radio" name="star-culture-region-mode" value="or" checked />OR（いずれか）</label>
+              <label><input type="radio" name="star-culture-region-mode" value="and" />AND（すべて）</label>
+            </div>
             <label><input type="checkbox" name="star-culture-region" value="aynu1" />区分Ⅰ</label>
             <label><input type="checkbox" name="star-culture-region" value="aynu2" />区分Ⅱ</label>
             <label><input type="checkbox" name="star-culture-region" value="aynu3" />区分Ⅲ</label>
@@ -76,7 +81,7 @@
     </main>
 
     <script src="js/dataLoader.js?v=v057a"></script>
-    <script src="js/starCultureList.js?v=v057a"></script>
+    <script src="js/starCultureList.js?v=v057a2"></script>
     <script src="js/includes.js?v=v057a"></script>
     <script src="js/contentProtection.js?v=v057a"></script>
   </body>

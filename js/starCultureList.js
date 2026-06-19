@@ -6,6 +6,7 @@
     hasPublishFlag: false,
     query: "",
     regions: [],
+    regionMode: "or",
     sortColumn: "name",
     sortDirection: "asc",
   };
@@ -329,7 +330,11 @@
       ];
       const matchesQuery = !query || queryTargets.some((value) => normalizeText(value).includes(query));
 
-      const matchesRegion = regions.length === 0 || regions.some((region) => hasRegion(item, region));
+      const matchesRegion =
+        regions.length === 0 ||
+        (state.regionMode === "and"
+          ? regions.every((region) => hasRegion(item, region))
+          : regions.some((region) => hasRegion(item, region)));
 
       return matchesQuery && matchesRegion;
     });
@@ -457,11 +462,20 @@
       });
     }
 
+    for (const input of els.regionModeInputs || []) {
+      input.addEventListener("change", () => {
+        state.regionMode = getSelectedRegionMode();
+        render();
+      });
+    }
+
     els.reset?.addEventListener("click", () => {
       state.query = "";
       state.regions = [];
+      state.regionMode = "or";
       if (els.query) els.query.value = "";
       for (const input of els.regionInputs || []) input.checked = false;
+      for (const input of els.regionModeInputs || []) input.checked = input.value === state.regionMode;
       render();
       els.query?.focus();
     });
@@ -474,6 +488,11 @@
       .filter((value) => STANDARD_AYNU_CODES.includes(value) || value === OTHER_REGION_FILTER);
   }
 
+  function getSelectedRegionMode() {
+    const selected = Array.from(els.regionModeInputs || []).find((input) => input.checked)?.value;
+    return selected === "and" ? "and" : "or";
+  }
+
   function applyInitialFiltersFromUrl() {
     const params = new URLSearchParams(window.location.search);
     const query = params.get("key") || params.get("q") || "";
@@ -481,13 +500,18 @@
       .split(",")
       .map((value) => value.trim())
       .filter((value) => STANDARD_AYNU_CODES.includes(value) || value === OTHER_REGION_FILTER);
+    const regionMode = params.get("regionMode") || params.get("region_mode");
 
     state.query = query;
     state.regions = regions;
+    state.regionMode = regionMode === "and" ? "and" : "or";
 
     if (els.query) els.query.value = state.query;
     for (const input of els.regionInputs || []) {
       input.checked = state.regions.includes(input.value);
+    }
+    for (const input of els.regionModeInputs || []) {
+      input.checked = input.value === state.regionMode;
     }
   }
 
@@ -522,6 +546,7 @@
   function init() {
     els.query = getElement("star-culture-query");
     els.regionInputs = document.querySelectorAll('input[name="star-culture-region"]');
+    els.regionModeInputs = document.querySelectorAll('input[name="star-culture-region-mode"]');
     els.reset = getElement("star-culture-reset");
     els.results = getElement("star-culture-results");
     els.tableHead = document.querySelector(".star-culture-table thead");

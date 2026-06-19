@@ -133,6 +133,23 @@
   font-size: 0.85rem;
 }
 
+.star-culture-region-mode {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+}
+
+.star-culture-region-mode > span {
+  color: #cbd5f5;
+  font-size: 0.85rem;
+}
+
+.star-culture-region-filter .star-culture-region-mode label {
+  min-height: 1.5rem;
+}
+
 .star-culture-region-filter label {
   display: inline-flex;
   align-items: center;
