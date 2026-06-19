@@ -719,15 +719,32 @@ function setLoadingMessage(text) {
 // 未選択時はダミー文言を表示。
 function updateRegionInfo() {
   // 左ペインの地域情報を、現在の市町村選択に合わせて組み立て直す。
-  // innerHTML を使うが、値はAPI管理の市町村・地域名のみで、任意HTMLを入力するUIは存在しない。
   const div = document.getElementById("region-info");
+  if (!div) return;
+
+  const appendRow = (label, value) => {
+    const row = document.createElement("div");
+    const heading = document.createElement("strong");
+    heading.textContent = label;
+    row.appendChild(heading);
+    row.appendChild(document.createTextNode(String(value ?? "")));
+    div.appendChild(row);
+  };
+
+  div.replaceChildren();
   if (!AppState.CURRENT_CITY) {
-    div.innerHTML = ["<div><strong>振興局　　：</strong>未選択</div>", "<div><strong>地方区分　：</strong>未選択</div>", "<div><strong>気象予報区：</strong>未選択</div>", "<div><strong>星文化地域：</strong>未選択</div>"].join("");
+    appendRow("振興局　　：", "未選択");
+    appendRow("地方区分　：", "未選択");
+    appendRow("気象予報区：", "未選択");
+    appendRow("星文化地域：", "未選択");
     return;
   }
   // areaキーを区分名に変換して表示
   const areaLabels = (AppState.CURRENT_AREA_KEYS || []).map((key) => AREA_LABEL_MAP[key] || key).join(" / ");
-  div.innerHTML = [`<div><strong>振興局　　：</strong>${AppState.CURRENT_BUREAU}</div>`, `<div><strong>地方区分　：</strong>${AppState.CURRENT_REGION}</div>`, `<div><strong>気象予報区：</strong>${AppState.CURRENT_FORECAST}</div>`, `<div><strong>星文化地域：</strong>${areaLabels}</div>`].join("");
+  appendRow("振興局　　：", AppState.CURRENT_BUREAU);
+  appendRow("地方区分　：", AppState.CURRENT_REGION);
+  appendRow("気象予報区：", AppState.CURRENT_FORECAST);
+  appendRow("星文化地域：", areaLabels);
 }
 
 function getAynuFeatureId(feature) {

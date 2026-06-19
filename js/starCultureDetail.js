@@ -63,6 +63,18 @@
     return { [firstKey]: row };
   }
 
+  function getSafeExternalUrl(value) {
+    const text = String(value ?? "").trim();
+    if (!text) return "";
+
+    try {
+      const url = new URL(text);
+      return url.protocol === "http:" || url.protocol === "https:" ? url.href : "";
+    } catch (_) {
+      return "";
+    }
+  }
+
   function setHidden(el, hidden) {
     if (el) el.hidden = hidden;
   }
@@ -97,9 +109,14 @@
     const text = formatText(value);
 
     if (column.type === "url" && String(value ?? "").trim()) {
+      const safeUrl = getSafeExternalUrl(value);
+      if (!safeUrl) {
+        td.textContent = "無効なURL";
+        return td;
+      }
       const link = document.createElement("a");
       link.className = "star-culture-inline-link";
-      link.href = String(value).trim();
+      link.href = safeUrl;
       link.target = "_blank";
       link.rel = "noopener noreferrer";
       link.textContent = text;
@@ -160,7 +177,6 @@
       columns: [
         { label: "天体名称", keys: ["astro_name", "astroName", "name"] },
         { label: "所属星座", keys: ["constellation"] },
-        { label: "メモ", keys: ["memo"] },
       ],
     },
     {
@@ -175,7 +191,6 @@
         { label: "発行/採集年月日", keys: ["publication_date", "publicationDate"] },
         { label: "採集地域", keys: ["publication_area", "publicationArea"] },
         { label: "URL", keys: ["url"], type: "url" },
-        { label: "メモ", keys: ["memo"] },
       ],
     },
     {
@@ -186,7 +201,6 @@
         { label: "伝承内容", keys: ["tradition_content", "traditionContent", "content"] },
         { label: "伝承地域", keys: ["tradition_area", "traditionArea"] },
         { label: "出典名", keys: ["source_name", "sourceName"] },
-        { label: "メモ", keys: ["memo"] },
       ],
     },
     {
@@ -194,7 +208,6 @@
       fields: ["star_area_link", "star_area_links", "area_links", "area_names"],
       columns: [
         { label: "地域名称", keys: ["area_name", "areaName", "name"] },
-        { label: "メモ", keys: ["memo"] },
       ],
     },
     {
@@ -205,7 +218,6 @@
         { label: "単語（英字）", keys: ["word_en", "wordEn"] },
         { label: "意味", keys: ["word_meaning", "wordMeaning"] },
         { label: "出典名", keys: ["source_name", "sourceName"] },
-        { label: "メモ", keys: ["memo"] },
       ],
     },
   ];
@@ -219,7 +231,6 @@
     appendBasicRow("オリジナル名称", getField(item, "original_name_ja"));
     appendBasicRow("オリジナル名称（英字）", getField(item, "original_name_en"));
     appendBasicRow("オリジナル意味", getField(item, "original_meaning"));
-    appendBasicRow("メモ", getField(item, "memo"));
   }
 
   function renderRelated(item) {

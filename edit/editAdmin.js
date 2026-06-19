@@ -125,7 +125,7 @@
         { name: "author", label: "著者/採取者", type: "text", maxLength: 32 },
         { name: "publication_date", label: "発行/採集年月日", type: "date" },
         { name: "publication_area", label: "採集地域", type: "text", maxLength: 16 },
-        { name: "url", label: "URL", type: "url" },
+        { name: "url", label: "URL", type: "url", maxLength: 2048 },
         { name: "memo", label: "メモ", type: "textarea" },
         { name: "is_published", label: "公開", type: "boolean", required: true, default: false },
         { name: "created_at", label: "作成日時", type: "datetime", readonly: true },
