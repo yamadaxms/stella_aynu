@@ -6,9 +6,15 @@
     hasPublishFlag: false,
     query: "",
     regions: [],
+    sortColumn: "name",
+    sortDirection: "asc",
   };
 
   const els = {};
+  const LIST_SORT_COLLATOR = new Intl.Collator("ja", {
+    numeric: true,
+    sensitivity: "base",
+  });
 
   function getElement(id) {
     return document.getElementById(id);
@@ -329,6 +335,66 @@
     });
   }
 
+  function getSortValue(item, column) {
+    switch (column) {
+      case "detail":
+        return getCultureKey(item);
+      case "name":
+        return getName(item);
+      case "nameEn":
+        return getNameEn(item);
+      case "description":
+        return getDescription(item);
+      case "astro":
+        return getAstroNames(item).join(",");
+      case "aynu1":
+      case "aynu2":
+      case "aynu3":
+      case "aynu4":
+      case "aynu5":
+        return hasRegion(item, column);
+      case "other":
+        return formatOtherRegions(item);
+      case "chart":
+        return String(getConstellationKey(item)).trim() !== "";
+      default:
+        return "";
+    }
+  }
+
+  function compareSortValues(a, b) {
+    const aEmpty = a === null || a === undefined || a === "";
+    const bEmpty = b === null || b === undefined || b === "";
+    if (aEmpty !== bEmpty) return aEmpty ? 1 : -1;
+    if (aEmpty) return 0;
+
+    if (typeof a === "boolean" && typeof b === "boolean") {
+      return Number(a) - Number(b);
+    }
+
+    return LIST_SORT_COLLATOR.compare(String(a), String(b));
+  }
+
+  function compareRows(a, b) {
+    const aValue = getSortValue(a, state.sortColumn);
+    const bValue = getSortValue(b, state.sortColumn);
+    const aEmpty = aValue === null || aValue === undefined || aValue === "";
+    const bEmpty = bValue === null || bValue === undefined || bValue === "";
+    if (aEmpty !== bEmpty) return aEmpty ? 1 : -1;
+
+    const direction = state.sortDirection === "desc" ? -1 : 1;
+    const result = compareSortValues(aValue, bValue);
+    if (result !== 0) return result * direction;
+    return LIST_SORT_COLLATOR.compare(String(getName(a)), String(getName(b)));
+  }
+
+  function updateSortHeaders() {
+    for (const th of els.tableHead?.querySelectorAll("th[data-sort-column]") || []) {
+      const isCurrent = th.dataset.sortColumn === state.sortColumn;
+      th.setAttribute("aria-sort", isCurrent ? (state.sortDirection === "desc" ? "descending" : "ascending") : "none");
+    }
+  }
+
   function renderRows(rows) {
     if (!els.results) return;
     els.results.textContent = "";
@@ -355,14 +421,30 @@
   }
 
   function render() {
-    const rows = filterConstellations().sort((a, b) => getName(a).localeCompare(getName(b), "ja"));
+    const rows = filterConstellations().sort(compareRows);
     renderRows(rows);
+    updateSortHeaders();
     updateCount(rows.length);
     setHidden(els.tableWrap, rows.length === 0);
     setHidden(els.empty, rows.length !== 0);
   }
 
   function bindEvents() {
+    els.tableHead?.addEventListener("click", (event) => {
+      const button = event.target.closest("button");
+      const th = button?.closest("th[data-sort-column]");
+      if (!th) return;
+
+      const column = th.dataset.sortColumn;
+      if (state.sortColumn === column) {
+        state.sortDirection = state.sortDirection === "asc" ? "desc" : "asc";
+      } else {
+        state.sortColumn = column;
+        state.sortDirection = "asc";
+      }
+      render();
+    });
+
     els.query?.addEventListener("input", (event) => {
       state.query = event.target.value;
       render();
@@ -442,6 +524,7 @@
     els.regionInputs = document.querySelectorAll('input[name="star-culture-region"]');
     els.reset = getElement("star-culture-reset");
     els.results = getElement("star-culture-results");
+    els.tableHead = document.querySelector(".star-culture-table thead");
     els.tableWrap = getElement("star-culture-table-wrap");
     els.empty = getElement("star-culture-empty");
     els.loading = getElement("star-culture-loading");

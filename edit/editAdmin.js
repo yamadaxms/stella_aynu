@@ -80,6 +80,7 @@
       name: "star_culture",
       label: "星文化情報",
       primaryKey: "star_culture_id",
+      defaultSort: "name_ja",
       listColumns: ["name_ja", "name_en", "meaning", "is_published"],
       relatedLinks: STAR_CULTURE_LINKS,
       columns: [
@@ -100,6 +101,7 @@
       name: "tradition_list",
       label: "伝承リスト",
       primaryKey: "tradition_title",
+      defaultSort: "tradition_title",
       listColumns: ["tradition_title", "tradition_area", "is_published"],
       columns: [
         { name: "tradition_title", label: "伝承タイトル", type: "text", required: true, maxLength: 64 },
@@ -115,6 +117,7 @@
       name: "source_list",
       label: "出典リスト",
       primaryKey: "source_name",
+      defaultSort: "source_name",
       listColumns: ["source_name", "source_cd", "author", "publication_date", "is_published"],
       columns: [
         { name: "source_name", label: "出典名", type: "text", required: true, maxLength: 32 },
@@ -136,6 +139,7 @@
       name: "area_list",
       label: "地域リスト",
       primaryKey: "area_name",
+      defaultSort: "area_name",
       listColumns: ["area_name", "memo"],
       columns: [
         { name: "area_name", label: "地域名称", type: "text", required: true, maxLength: 32 },
@@ -146,6 +150,7 @@
       name: "astro_master",
       label: "天体マスタ",
       primaryKey: "astro_name",
+      defaultSort: "astro_name",
       listColumns: ["astro_name", "astro_cd", "constellation", "memo"],
       columns: [
         { name: "astro_name", label: "天体名称", type: "text", required: true, maxLength: 32 },
@@ -158,6 +163,7 @@
       name: "word_master",
       label: "単語マスタ",
       primaryKey: "word_ja",
+      defaultSort: "word_ja",
       listColumns: ["word_ja", "word_en", "word_meaning", "memo"],
       columns: [
         { name: "word_ja", label: "単語", type: "text", required: true, maxLength: 32 },
@@ -179,6 +185,8 @@
     relatedLinks: {},
     loading: false,
     loadRequestId: 0,
+    sortColumn: TABLES[0].defaultSort,
+    sortDirection: "asc",
   };
 
   const els = {};
@@ -494,6 +502,8 @@
         if (state.tableName === table.name) return;
         state.tableName = table.name;
         state.query = "";
+        state.sortColumn = table.defaultSort || table.listColumns[0] || table.primaryKey;
+        state.sortDirection = "asc";
         els.searchInput.value = "";
         clearEditor();
         renderTableNav();
@@ -576,19 +586,28 @@
     rowEl.appendChild(cell);
   }
 
-  function getListSortColumns(table) {
-    if (table.name === "star_culture") return ["star_culture_id"];
-    if (table.name === "astro_master") return ["astro_cd", "astro_name"];
-    if (table.name === "source_list") return ["source_cd", "source_name"];
-    return [table.primaryKey];
-  }
-
   function compareListRows(table, a, b) {
-    for (const columnName of getListSortColumns(table)) {
-      const result = LIST_SORT_COLLATOR.compare(String(a?.[columnName] ?? ""), String(b?.[columnName] ?? ""));
-      if (result !== 0) return result;
+    const column = getColumnDefinition(table, state.sortColumn);
+    const aValue = a?.[state.sortColumn];
+    const bValue = b?.[state.sortColumn];
+    const aEmpty = aValue === null || aValue === undefined || aValue === "";
+    const bEmpty = bValue === null || bValue === undefined || bValue === "";
+
+    if (aEmpty !== bEmpty) return aEmpty ? 1 : -1;
+
+    let result = 0;
+    if (!aEmpty) {
+      if (column?.type === "integer") {
+        result = Number(aValue) - Number(bValue);
+      } else if (column?.type === "boolean") {
+        result = Number(Boolean(aValue)) - Number(Boolean(bValue));
+      } else {
+        result = LIST_SORT_COLLATOR.compare(String(aValue), String(bValue));
+      }
     }
-    return 0;
+
+    if (result !== 0) return state.sortDirection === "desc" ? -result : result;
+    return LIST_SORT_COLLATOR.compare(String(a?.[table.primaryKey] ?? ""), String(b?.[table.primaryKey] ?? ""));
   }
 
   function renderRows() {
@@ -600,13 +619,31 @@
     columns.forEach((column) => {
       const th = document.createElement("th");
       th.scope = "col";
-      th.textContent = column.label;
+      th.dataset.sortColumn = column.name;
+      const isCurrentSort = column.name === state.sortColumn;
+      th.setAttribute("aria-sort", isCurrentSort ? (state.sortDirection === "desc" ? "descending" : "ascending") : "none");
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "data-table-sort-button";
+      button.textContent = column.label;
+      button.addEventListener("click", () => {
+        if (state.sortColumn === column.name) {
+          state.sortDirection = state.sortDirection === "asc" ? "desc" : "asc";
+        } else {
+          state.sortColumn = column.name;
+          state.sortDirection = "asc";
+        }
+        renderRows();
+      });
+      th.appendChild(button);
       headRow.appendChild(th);
     });
     els.dataHead.appendChild(headRow);
 
     els.dataBody.textContent = "";
-    state.rows.forEach((row) => {
+    const sortedRows = state.rows.slice().sort((a, b) => compareListRows(table, a, b));
+    sortedRows.forEach((row) => {
       const rowEl = document.createElement("tr");
       const pk = row[table.primaryKey];
       rowEl.tabIndex = 0;
@@ -653,7 +690,7 @@
         }),
       );
       if (requestId !== state.loadRequestId) return;
-      state.rows = (Array.isArray(data.rows) ? data.rows : []).slice().sort((a, b) => compareListRows(table, a, b));
+      state.rows = (Array.isArray(data.rows) ? data.rows : []).slice();
       renderRows();
 
       if (state.selectedPrimaryKey !== null) {

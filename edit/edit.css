@@ -346,6 +346,31 @@ textarea:focus-visible {
   font-weight: 600;
 }
 
+.data-table-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.data-table th[aria-sort="ascending"] .data-table-sort-button::after {
+  content: "▲";
+  font-size: 0.65rem;
+}
+
+.data-table th[aria-sort="descending"] .data-table-sort-button::after {
+  content: "▼";
+  font-size: 0.65rem;
+}
+
 .data-table tbody tr {
   cursor: pointer;
 }

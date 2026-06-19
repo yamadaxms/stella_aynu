@@ -282,6 +282,31 @@
   z-index: 1;
 }
 
+.star-culture-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.star-culture-table th[aria-sort="ascending"] .star-culture-sort-button::after {
+  content: "▲";
+  font-size: 0.65rem;
+}
+
+.star-culture-table th[aria-sort="descending"] .star-culture-sort-button::after {
+  content: "▼";
+  font-size: 0.65rem;
+}
+
 .star-culture-detail-table th {
   width: 13rem;
   white-space: nowrap;

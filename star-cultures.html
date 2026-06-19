@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <link rel="stylesheet" href="css/style.css" />
-    <link rel="stylesheet" href="css/starCulture.css?v=20260619a" />
+    <link rel="stylesheet" href="css/starCulture.css?v=v057a" />
   </head>
   <body class="star-culture-list-body">
     <div id="site-header-include"></div>
@@ -55,18 +55,18 @@
           <table class="star-culture-table">
             <thead>
               <tr>
-                <th scope="col">詳細</th>
-                <th scope="col">名称</th>
-                <th scope="col">名称（英字）</th>
-                <th scope="col">意味</th>
-                <th scope="col">関連天体</th>
-                <th scope="col">区分Ⅰ</th>
-                <th scope="col">区分Ⅱ</th>
-                <th scope="col">区分Ⅲ</th>
-                <th scope="col">区分Ⅳ</th>
-                <th scope="col">区分Ⅴ</th>
-                <th scope="col">その他</th>
-                <th scope="col">星図表示</th>
+                <th scope="col" data-sort-column="detail" aria-sort="none"><button class="star-culture-sort-button" type="button">詳細</button></th>
+                <th scope="col" data-sort-column="name" aria-sort="ascending"><button class="star-culture-sort-button" type="button">名称</button></th>
+                <th scope="col" data-sort-column="nameEn" aria-sort="none"><button class="star-culture-sort-button" type="button">名称（英字）</button></th>
+                <th scope="col" data-sort-column="description" aria-sort="none"><button class="star-culture-sort-button" type="button">意味</button></th>
+                <th scope="col" data-sort-column="astro" aria-sort="none"><button class="star-culture-sort-button" type="button">関連天体</button></th>
+                <th scope="col" data-sort-column="aynu1" aria-sort="none"><button class="star-culture-sort-button" type="button">区分Ⅰ</button></th>
+                <th scope="col" data-sort-column="aynu2" aria-sort="none"><button class="star-culture-sort-button" type="button">区分Ⅱ</button></th>
+                <th scope="col" data-sort-column="aynu3" aria-sort="none"><button class="star-culture-sort-button" type="button">区分Ⅲ</button></th>
+                <th scope="col" data-sort-column="aynu4" aria-sort="none"><button class="star-culture-sort-button" type="button">区分Ⅳ</button></th>
+                <th scope="col" data-sort-column="aynu5" aria-sort="none"><button class="star-culture-sort-button" type="button">区分Ⅴ</button></th>
+                <th scope="col" data-sort-column="other" aria-sort="none"><button class="star-culture-sort-button" type="button">その他</button></th>
+                <th scope="col" data-sort-column="chart" aria-sort="none"><button class="star-culture-sort-button" type="button">星図表示</button></th>
               </tr>
             </thead>
             <tbody id="star-culture-results"></tbody>
@@ -75,9 +75,9 @@
       </section>
     </main>
 
-    <script src="js/dataLoader.js?v=v057"></script>
-    <script src="js/starCultureList.js?v=v057"></script>
-    <script src="js/includes.js?v=v057"></script>
-    <script src="js/contentProtection.js?v=v057"></script>
+    <script src="js/dataLoader.js?v=v057a"></script>
+    <script src="js/starCultureList.js?v=v057a"></script>
+    <script src="js/includes.js?v=v057a"></script>
+    <script src="js/contentProtection.js?v=v057a"></script>
   </body>
 </html>
