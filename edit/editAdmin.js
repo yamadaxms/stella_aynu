@@ -150,7 +150,7 @@
       name: "astro_master",
       label: "天体マスタ",
       primaryKey: "astro_name",
-      defaultSort: "astro_name",
+      defaultSort: "astro_cd",
       listColumns: ["astro_name", "astro_cd", "constellation", "memo"],
       columns: [
         { name: "astro_name", label: "天体名称", type: "text", required: true, maxLength: 32 },
