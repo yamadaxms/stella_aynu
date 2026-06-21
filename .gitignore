@@ -15,7 +15,6 @@ ddl.txt
 lambda_deploy.zip
 requirements.txt
 package/db.py
-package/lambda_function.py
 package/psycopg2/__init__.py
 package/psycopg2/_ipaddress.py
 package/psycopg2/_json.py
@@ -46,7 +45,7 @@ package/psycopg2_binary-2.9.12.dist-info/top_level.txt
 package/psycopg2_binary-2.9.12.dist-info/WHEEL
 package/psycopg2_binary-2.9.12.dist-info/licenses/LICENSE
 db.py
-lambda_function.py
+/lambda_function.py
 package/psycopg2_binary-2.9.12.dist-info/sboms/auditwheel.cdx.json
 package/psycopg2_binary.libs/libcom_err-2abe824b.so.2.1
 package/psycopg2_binary.libs/libcrypt-13f4f5d0.so.1

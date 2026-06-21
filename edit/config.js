@@ -5,6 +5,7 @@
     apiBaseUrl: window.AYNU_API_BASE_URL || "https://b43aedz221.execute-api.ap-northeast-1.amazonaws.com",
     adminApiPath: "/api/admin/tables",
     adminOptionsPath: "/api/admin/tables/_options",
+    adminExportPath: "/api/admin/export-json",
     auth: {
       region: "ap-northeast-1",
       cognitoDomain: "https://ap-northeast-1trcwtrr0a.auth.ap-northeast-1.amazoncognito.com",

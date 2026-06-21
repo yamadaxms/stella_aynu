@@ -3,6 +3,7 @@
   const API_BASE_URL = String(CONFIG.apiBaseUrl || "").replace(/\/$/, "");
   const ADMIN_API_PATH = CONFIG.adminApiPath || "/api/admin/tables";
   const ADMIN_OPTIONS_PATH = CONFIG.adminOptionsPath || `${ADMIN_API_PATH}/_options`;
+  const ADMIN_EXPORT_PATH = CONFIG.adminExportPath || "/api/admin/export-json";
   const AUTH = CONFIG.auth || {};
   const TOKEN_KEY = "aynuEditAuth";
   const PKCE_KEY_PREFIX = "aynuEditPkce:";
@@ -419,6 +420,7 @@
       els.appPanel.hidden = false;
       els.loginButton.hidden = true;
       els.logoutButton.hidden = false;
+      els.exportJsonButton.hidden = false;
       els.sessionUser.textContent = userName;
       return true;
     }
@@ -427,6 +429,7 @@
     els.appPanel.hidden = true;
     els.loginButton.hidden = false;
     els.logoutButton.hidden = true;
+    els.exportJsonButton.hidden = true;
     els.sessionUser.textContent = "未ログイン";
 
     if (!getAuthConfigReady()) {
@@ -451,6 +454,10 @@
 
   function buildAdminOptionsUrl() {
     return new URL(`${API_BASE_URL}${ADMIN_OPTIONS_PATH}`, window.location.origin);
+  }
+
+  function buildAdminExportUrl() {
+    return new URL(`${API_BASE_URL}${ADMIN_EXPORT_PATH}`, window.location.origin);
   }
 
   async function apiRequest(pathOrUrl, options = {}) {
@@ -1118,6 +1125,32 @@
     }
   }
 
+  async function exportPublicJson() {
+    const ok = window.confirm("現在の公開対象データで公開JSONを更新します。");
+    if (!ok) return;
+
+    const originalLabel = els.exportJsonButton.textContent;
+    setStatus("");
+    els.exportJsonButton.disabled = true;
+    els.exportJsonButton.textContent = "生成中…";
+
+    try {
+      const result = await apiRequest(buildAdminExportUrl(), { method: "POST" });
+      const counts = result.counts || {};
+      const countText = [
+        `星 ${Number(counts.stars || 0)}件`,
+        `星文化 ${Number(counts.constellations || 0)}件`,
+        `市町村 ${Number(counts.cities || 0)}件`,
+      ].join(" / ");
+      setStatus(`公開JSONを生成しました。${countText}`, "info");
+    } catch (err) {
+      setStatus(err.message || String(err));
+    } finally {
+      els.exportJsonButton.disabled = false;
+      els.exportJsonButton.textContent = originalLabel;
+    }
+  }
+
   function runSearch() {
     const nextQuery = els.searchInput.value.trim();
     if (state.query === nextQuery) return;
@@ -1139,6 +1172,7 @@
       sessionUser: document.getElementById("session-user"),
       loginButton: document.getElementById("login-button"),
       logoutButton: document.getElementById("logout-button"),
+      exportJsonButton: document.getElementById("export-json-button"),
       tableNav: document.getElementById("table-nav"),
       listHeading: document.getElementById("list-heading"),
       newRowButton: document.getElementById("new-row-button"),
@@ -1164,6 +1198,7 @@
   function bindEvents() {
     els.loginButton.addEventListener("click", login);
     els.logoutButton.addEventListener("click", logout);
+    els.exportJsonButton.addEventListener("click", exportPublicJson);
     els.newRowButton.addEventListener("click", startCreate);
     els.reloadButton.addEventListener("click", loadRows);
     els.editorForm.addEventListener("submit", saveForm);

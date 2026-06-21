@@ -272,7 +272,7 @@ async function initApp() {
   setLoadingMessage("データ読み込み中……");
 
   const tryInit = async () => {
-    // 必要なデータをAPIからまとめて取得し、以降の UI 更新に使う。
+    // 必要なデータを公開JSONからまとめて取得し、以降の UI 更新に使う。
     AppState.AYNU_DATA = await loadAllAynuData();
 
     // 市町村リストをプルダウンに並べる。
@@ -435,7 +435,7 @@ function resetCelestialView() {
 // ============================================================
 // 市町村選択 UI の構築
 // ============================================================
-// APIから取得した市町村マップをもとにプルダウンリストを生成。
+// 公開JSONから取得した市町村マップをもとにプルダウンリストを生成。
 // 選択変更時は onCityChange で描画・情報を更新します。
 function setupCitySelect(cityMap) {
   const select = document.getElementById("city-select");

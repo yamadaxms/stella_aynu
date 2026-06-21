@@ -136,6 +136,16 @@ textarea:focus-visible {
   color: #dffcf7;
 }
 
+.button-publish {
+  border-color: #d97706;
+  background: #4a2b0a;
+  color: #fef3c7;
+}
+
+.button-publish:hover:not(:disabled) {
+  border-color: var(--warning);
+}
+
 .button-muted {
   color: var(--muted);
 }
