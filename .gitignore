@@ -3,12 +3,11 @@
 .gitignore
 .env
 .vscode/launch.json
-.gitignore
 .vscode/tasks.json
-.gitignore
 .vscode/settings.json
 lambda_deploy.zip
 package/db.py
+package/lambda_function.py
 package/psycopg2/__init__.py
 package/psycopg2/_ipaddress.py
 package/psycopg2/_json.py
@@ -56,4 +55,3 @@ package/psycopg2_binary.libs/libselinux-0922c95c.so.1
 package/psycopg2_binary.libs/libssl-fe1b61af.so.3
 package/psycopg2/_psycopg.cpython-312-x86_64-linux-gnu.so
 ddl.txt
-global-bundle.pem
