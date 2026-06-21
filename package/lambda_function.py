@@ -274,7 +274,14 @@ def handle_admin_request(event, method, path):
         if path.endswith("/api/admin/export-json"):
             if method != "POST":
                 return response(405, {"error": "Method not allowed"}, event)
-            return response(200, export_public_json(), event)
+
+            try:
+                result = export_public_json()
+                return response(200, result, event)
+            except Exception as e:
+                import traceback
+                print(traceback.format_exc())
+                raise
 
         if (
             path.endswith("/api/admin/options")
