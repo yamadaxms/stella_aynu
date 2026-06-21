@@ -1,5 +1,6 @@
 import base64
 import json
+import logging
 import os
 from datetime import datetime, timezone
 from urllib.parse import parse_qs, unquote
@@ -21,17 +22,19 @@ from db import (
 # ============================================================
 # API Gateway / Lambda エントリポイント
 # ============================================================
-# フロントエンドの js/dataLoader.js が取得する /api/aynu-data を返す。
-# Lambda関数としてはDB整形処理を db.py に委譲し、このファイルではHTTPメソッド・パス・CORS・JSON応答だけを扱う。
+# 認証済みユーザー向けの管理APIだけを処理する。
+# 公開データは管理APIからエクスポートしたJSONをS3とCloudFrontで配信する。
 # REST API形式(httpMethod/path)とHTTP API v2形式(requestContext.http/rawPath)の両方に対応し、
 # API Gateway の構成が変わっても同じ handler を使えるようにしている。
-DEFAULT_ALLOWED_ORIGINS = "https://yamadaxms.github.io"
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+DEFAULT_ALLOWED_ORIGINS = "https://main.d3nyn80kgira6c.amplifyapp.com"
 BASE_RESPONSE_HEADERS = {
     "Access-Control-Allow-Headers": "Content-Type,Authorization",
     "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
     "Content-Type": "application/json; charset=utf-8",
 }
-PUBLIC_DATA_KEY = "data/aynu-data.json"
 
 
 def get_request_header(event, header_name):
@@ -84,7 +87,7 @@ def get_method(event):
 
 def get_path(event):
     """API Gateway のイベント形式差分を吸収してリクエストパスを取り出す。"""
-    return event.get("rawPath") or event.get("path") or "/api/aynu-data"
+    return event.get("rawPath") or event.get("path") or "/"
 
 
 def get_query_params(event):
@@ -218,7 +221,7 @@ def export_public_json():
     if not bucket:
         raise RuntimeError("AYNU_PUBLIC_DATA_BUCKET が設定されていません")
 
-    object_key = os.environ.get("AYNU_PUBLIC_DATA_KEY", PUBLIC_DATA_KEY).strip().lstrip("/")
+    object_key = os.environ.get("AYNU_PUBLIC_DATA_KEY", "").strip().lstrip("/")
     if not object_key:
         raise RuntimeError("AYNU_PUBLIC_DATA_KEY が空です")
 
@@ -359,16 +362,16 @@ def handle_admin_request(event, method, path):
         return response(400, {"error": str(exc)}, event)
     except psycopg2.IntegrityError as exc:
         return response(409, {"error": str(exc).splitlines()[0]}, event)
-    except Exception as exc:
-        return response(500, {"error": str(exc)}, event)
+    except Exception:
+        logger.exception("Unhandled exception")
+        return response(500, {"error": "Internal server error"}, event)
 
 
 def handler(event, context):
     """Lambdaのメイン処理。
 
     OPTIONS はCORSプリフライト用に即時成功させる。
-    GET /api/aynu-data と認証済み管理APIだけを公開し、それ以外のメソッドやパスは明示的に拒否する。
-    正常時はDBから組み立てた stars / constellations / cityMap を返し、例外時は画面側が表示できる error JSON にする。
+    認証済み管理APIだけを処理し、それ以外のパスは404を返す。
     """
     method = get_method(event or {})
     path = get_path(event or {})
@@ -379,13 +382,4 @@ def handler(event, context):
     if is_admin_path(path):
         return handle_admin_request(event or {}, method, path)
 
-    if method != "GET":
-        return response(405, {"error": "Method not allowed"}, event)
-
-    if path != "/api/aynu-data" and not path.endswith("/api/aynu-data"):
-        return response(404, {"error": "Not found"}, event)
-
-    try:
-        return response(200, build_aynu_data(), event)
-    except Exception as exc:
-        return response(500, {"error": str(exc)}, event)
+    return response(404, {"error": "Not found"}, event)
