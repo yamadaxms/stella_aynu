@@ -3,6 +3,6 @@
 .env
 .venv/
 .vscode/*
-package/*
+package/psycopg2*
 ddl.txt
 lambda_deploy.zip
