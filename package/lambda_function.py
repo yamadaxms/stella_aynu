@@ -29,7 +29,6 @@ from db import (
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-DEFAULT_ALLOWED_ORIGINS = "https://main.d3nyn80kgira6c.amplifyapp.com"
 BASE_RESPONSE_HEADERS = {
     "Access-Control-Allow-Headers": "Content-Type,Authorization",
     "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
@@ -49,7 +48,7 @@ def get_request_header(event, header_name):
 
 def get_allowed_origins():
     """CORSを許可する完全一致Originの集合を環境変数から作る。"""
-    raw = os.environ.get("AYNU_ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS)
+    raw = os.environ["AYNU_ALLOWED_ORIGINS"]
     return {origin.strip().rstrip("/") for origin in raw.split(",") if origin.strip()}
 
 
