@@ -1,9 +1,14 @@
 (() => {
   const currentPageUrl = window.location.href.split(/[?#]/)[0];
+  const AppConfig = {
+    apiBaseUrl: window.AYNU_API_BASE_URL || "https://b43aedz221.execute-api.ap-northeast-1.amazonaws.com",
+    rdsControlApiBaseUrl: window.AYNU_RDS_CONTROL_API_BASE_URL || "https://kn7btc4kw2.execute-api.ap-northeast-1.amazonaws.com",
+  };
 
   window.AYNU_EDIT_CONFIG = {
-    apiBaseUrl: window.AYNU_API_BASE_URL || "https://kn7btc4kw2.execute-api.ap-northeast-1.amazonaws.com",
-    rdsControlApiBaseUrl: window.AYNU_RDS_CONTROL_API_BASE_URL || window.AYNU_API_BASE_URL || "https://kn7btc4kw2.execute-api.ap-northeast-1.amazonaws.com",
+    apiBaseUrl: AppConfig.apiBaseUrl,
+    rdsControlApiBaseUrl: AppConfig.rdsControlApiBaseUrl,
+
     adminApiPath: "/api/admin/tables",
     adminOptionsPath: "/api/admin/tables/_options",
     adminExportPath: "/api/admin/export-json",
