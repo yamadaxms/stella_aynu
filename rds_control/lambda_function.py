@@ -497,7 +497,7 @@ def handle_api_request(event, method, path):
         return response(500, {"error": "Internal server error"}, event)
 
 
-def handler(event, context):
+def lambda_handler(event, context):
     """RDS制御Lambdaのメイン処理。API GatewayとEventBridge Schedulerの両方に対応する。"""
     event = event or {}
 
