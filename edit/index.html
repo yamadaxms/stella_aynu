@@ -6,9 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex,nofollow" />
 
-    <link rel="stylesheet" href="edit.css?v=v058" />
-    <script src="config.js?v=v058"></script>
-    <script src="editAdmin.js?v=v058" defer></script>
+    <link rel="stylesheet" href="edit.css?v=v060" />
+    <script src="config.js?v=v060"></script>
+    <script src="editAdmin.js?v=v060" defer></script>
   </head>
   <body>
     <header class="edit-header">
@@ -18,6 +18,7 @@
       </div>
       <div class="edit-session">
         <button id="export-json-button" class="button button-publish" type="button" hidden>公開JSONを生成</button>
+        <span id="rds-auto-stop" class="session-user rds-auto-stop" hidden></span>
         <span id="session-user" class="session-user">未ログイン</span>
         <button id="login-button" class="button button-primary" type="button">ログイン</button>
         <button id="logout-button" class="button" type="button" hidden>ログアウト</button>
@@ -29,6 +30,17 @@
         <div>
           <h2 id="auth-heading">編集者ログイン</h2>
           <p id="auth-message" class="auth-message">ログイン後に編集画面を表示します。</p>
+        </div>
+      </section>
+
+      <section id="rds-panel" class="auth-panel rds-panel" aria-labelledby="rds-heading" hidden>
+        <div>
+          <h2 id="rds-heading">RDS状態を確認中です</h2>
+          <p id="rds-message" class="auth-message">データベース状態を確認しています。</p>
+          <div class="rds-actions">
+            <button id="rds-start-button" class="button button-primary" type="button" hidden>RDSを起動</button>
+            <button id="rds-reload-button" class="button" type="button">再読み込み</button>
+          </div>
         </div>
       </section>
 

@@ -6,3 +6,4 @@
 package/psycopg2*
 ddl.txt
 lambda_deploy.zip
+rds_control_deploy.zip

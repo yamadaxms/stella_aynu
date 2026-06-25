@@ -1,13 +1,18 @@
 (() => {
   const CONFIG = window.AYNU_EDIT_CONFIG || {};
   const API_BASE_URL = String(CONFIG.apiBaseUrl || "").replace(/\/$/, "");
+  const RDS_CONTROL_API_BASE_URL = String(CONFIG.rdsControlApiBaseUrl || CONFIG.apiBaseUrl || "").replace(/\/$/, "");
   const ADMIN_API_PATH = CONFIG.adminApiPath || "/api/admin/tables";
   const ADMIN_OPTIONS_PATH = CONFIG.adminOptionsPath || `${ADMIN_API_PATH}/_options`;
   const ADMIN_EXPORT_PATH = CONFIG.adminExportPath || "/api/admin/export-json";
+  const RDS_STATUS_PATH = CONFIG.rdsStatusPath || "/api/admin/rds-status";
+  const RDS_START_PATH = CONFIG.rdsStartPath || "/api/admin/rds-start";
+  const HEARTBEAT_PATH = CONFIG.heartbeatPath || "/api/admin/heartbeat";
   const AUTH = CONFIG.auth || {};
   const TOKEN_KEY = "aynuEditAuth";
   const PKCE_KEY_PREFIX = "aynuEditPkce:";
   const SEARCH_DEBOUNCE_MS = 250;
+  const HEARTBEAT_INTERVAL_MS = normalizeHeartbeatInterval(CONFIG.heartbeatIntervalMs);
   const DELETE_ENABLED = false;
   const JST_TIME_ZONE = "Asia/Tokyo";
   const LIST_SORT_COLLATOR = new Intl.Collator("ja", {
@@ -200,10 +205,18 @@
     sortColumn: TABLES[0].defaultSort,
     sortDirection: "asc",
     isDefaultSort: true,
+    rdsStatus: "unknown",
+    rdsStatusDetail: {
+      startedAt: null,
+      lastActiveAt: null,
+      autoStopAt: null,
+    },
   };
 
   const els = {};
   let searchTimer = 0;
+  let heartbeatTimer = 0;
+  let heartbeatInFlight = false;
 
   function getTableDefinition(name = state.tableName) {
     return TABLES.find((table) => table.name === name) || TABLES[0];
@@ -251,6 +264,12 @@
 
   function setAuthMessage(message) {
     if (els.authMessage) els.authMessage.textContent = message;
+  }
+
+  function normalizeHeartbeatInterval(value) {
+    const interval = Number(value || 3 * 60_000);
+    if (!Number.isFinite(interval)) return 3 * 60_000;
+    return Math.min(5 * 60_000, Math.max(60_000, interval));
   }
 
   function base64UrlEncode(buffer) {
@@ -417,15 +436,20 @@
 
     if (session) {
       els.authPanel.hidden = true;
-      els.appPanel.hidden = false;
+      els.rdsPanel.hidden = state.rdsStatus === "available";
+      els.appPanel.hidden = state.rdsStatus !== "available";
       els.loginButton.hidden = true;
       els.logoutButton.hidden = false;
-      els.exportJsonButton.hidden = false;
+      els.exportJsonButton.hidden = state.rdsStatus !== "available";
       els.sessionUser.textContent = userName;
       return true;
     }
 
+    stopHeartbeat();
+    state.rdsStatus = "unknown";
+    updateRdsStatusDetail({});
     els.authPanel.hidden = false;
+    els.rdsPanel.hidden = true;
     els.appPanel.hidden = true;
     els.loginButton.hidden = false;
     els.logoutButton.hidden = true;
@@ -458,6 +482,23 @@
 
   function buildAdminExportUrl() {
     return new URL(`${API_BASE_URL}${ADMIN_EXPORT_PATH}`, window.location.origin);
+  }
+
+  function buildAdminControlUrl(path) {
+    const normalizedPath = String(path || "").startsWith("/") ? path : `/${path}`;
+    return new URL(`${RDS_CONTROL_API_BASE_URL}${normalizedPath}`, window.location.origin);
+  }
+
+  function buildRdsStatusUrl() {
+    return buildAdminControlUrl(RDS_STATUS_PATH);
+  }
+
+  function buildRdsStartUrl() {
+    return buildAdminControlUrl(RDS_START_PATH);
+  }
+
+  function buildHeartbeatUrl() {
+    return buildAdminControlUrl(HEARTBEAT_PATH);
   }
 
   async function apiRequest(pathOrUrl, options = {}) {
@@ -506,6 +547,186 @@
     }
 
     return body;
+  }
+
+  function normalizeRdsStatus(status) {
+    return String(status || "unknown").trim().toLowerCase() || "unknown";
+  }
+
+  function updateRdsStatusDetail(data = {}) {
+    state.rdsStatusDetail = {
+      startedAt: data.startedAt || null,
+      lastActiveAt: data.lastActiveAt || null,
+      autoStopAt: data.autoStopAt || null,
+    };
+    renderRdsAutoStop();
+  }
+
+  function renderRdsAutoStop() {
+    if (!els.rdsAutoStop) return;
+
+    const autoStopAt = state.rdsStatusDetail.autoStopAt;
+    if (state.rdsStatus !== "available" || !autoStopAt) {
+      els.rdsAutoStop.hidden = true;
+      els.rdsAutoStop.textContent = "";
+      els.rdsAutoStop.removeAttribute("title");
+      return;
+    }
+
+    const text = `自動停止予定 ${formatDateTime(autoStopAt)}`;
+    els.rdsAutoStop.hidden = false;
+    els.rdsAutoStop.textContent = text;
+    els.rdsAutoStop.title = text;
+  }
+
+  function setRdsPanel(status, message = "") {
+    const normalizedStatus = normalizeRdsStatus(status);
+    const content = {
+      checking: {
+        heading: "RDS状態を確認中です",
+        message: "データベース状態を確認しています。",
+        canStart: false,
+      },
+      stopped: {
+        heading: "データベースは停止中です",
+        message: "データベースは停止中です。起動してから編集してください。",
+        canStart: true,
+      },
+      starting: {
+        heading: "データベースを起動中です",
+        message: "起動中です。数分後に再読み込みしてください。",
+        canStart: false,
+      },
+      stopping: {
+        heading: "データベースを停止中です",
+        message: "停止処理中です。しばらくしてから再読み込みしてください。",
+        canStart: false,
+      },
+      error: {
+        heading: "RDS状態を確認できませんでした",
+        message: "RDS状態確認APIの応答を確認してください。",
+        canStart: false,
+      },
+      unknown: {
+        heading: "RDS状態を確認できませんでした",
+        message: "未対応のRDS状態です。しばらくしてから再読み込みしてください。",
+        canStart: false,
+      },
+    };
+    const current = content[normalizedStatus] || content.unknown;
+
+    els.rdsHeading.textContent = current.heading;
+    els.rdsMessage.textContent = message || current.message;
+    els.rdsStartButton.hidden = !current.canStart;
+    els.rdsStartButton.disabled = false;
+    els.rdsReloadButton.disabled = normalizedStatus === "checking";
+  }
+
+  function renderRdsState(status, message = "") {
+    state.rdsStatus = normalizeRdsStatus(status);
+
+    const isAvailable = state.rdsStatus === "available";
+    els.rdsPanel.hidden = isAvailable;
+    els.appPanel.hidden = !isAvailable;
+    els.exportJsonButton.hidden = !isAvailable;
+    renderRdsAutoStop();
+
+    if (!isAvailable) {
+      stopHeartbeat();
+      setRdsPanel(state.rdsStatus, message);
+    }
+  }
+
+  async function getRdsStatus() {
+    const data = await apiRequest(buildRdsStatusUrl());
+    updateRdsStatusDetail(data);
+    return data;
+  }
+
+  async function startRds() {
+    els.rdsStartButton.disabled = true;
+    els.rdsReloadButton.disabled = true;
+    els.rdsMessage.textContent = "RDS起動要求を送信しています。";
+
+    try {
+      const result = await apiRequest(buildRdsStartUrl(), { method: "POST" });
+      updateRdsStatusDetail(result);
+      const nextStatus = normalizeRdsStatus(result.status || "starting");
+      if (nextStatus === "available") {
+        await initializeEditor();
+        return;
+      }
+      renderRdsState(
+        nextStatus,
+        result.action === "start-requested" ? "RDS起動要求を受け付けました。数分後に再読み込みしてください。" : "",
+      );
+    } catch (err) {
+      if (!getValidSession()) return;
+      renderRdsState("stopped", err.message || String(err));
+    }
+  }
+
+  async function sendHeartbeat() {
+    if (state.rdsStatus !== "available" || heartbeatInFlight) return;
+
+    heartbeatInFlight = true;
+    try {
+      const result = await apiRequest(buildHeartbeatUrl(), { method: "POST" });
+      updateRdsStatusDetail(result);
+      const nextStatus = normalizeRdsStatus(result.status || state.rdsStatus);
+      if (nextStatus !== state.rdsStatus) {
+        renderRdsState(nextStatus);
+      } else {
+        renderRdsAutoStop();
+      }
+    } catch (err) {
+      console.warn("heartbeat failed", err);
+    } finally {
+      heartbeatInFlight = false;
+    }
+  }
+
+  function startHeartbeat() {
+    stopHeartbeat();
+    sendHeartbeat();
+    heartbeatTimer = window.setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
+  }
+
+  function stopHeartbeat() {
+    if (!heartbeatTimer) return;
+    window.clearInterval(heartbeatTimer);
+    heartbeatTimer = 0;
+  }
+
+  async function initializeEditor() {
+    renderRdsState("checking");
+
+    let rdsStatusData;
+    try {
+      rdsStatusData = await getRdsStatus();
+    } catch (err) {
+      if (!getValidSession()) return;
+      renderRdsState("error", err.message || String(err));
+      return;
+    }
+
+    const rdsStatus = normalizeRdsStatus(rdsStatusData.status);
+    renderRdsState(rdsStatus);
+    if (rdsStatus !== "available") return;
+
+    startHeartbeat();
+
+    let lookupError = null;
+    try {
+      await loadLookupOptions();
+    } catch (err) {
+      lookupError = err;
+    }
+
+    await loadRows();
+    if (lookupError) {
+      setStatus(`コードマスタの読み込みに失敗しました。${lookupError.message || String(lookupError)}`);
+    }
   }
 
   function renderTableNav() {
@@ -705,6 +926,8 @@
   }
 
   async function loadRows() {
+    if (state.rdsStatus !== "available") return;
+
     const table = getTableDefinition();
     const requestId = state.loadRequestId + 1;
     state.loadRequestId = requestId;
@@ -1167,8 +1390,14 @@
   function bindElements() {
     Object.assign(els, {
       authPanel: document.getElementById("auth-panel"),
+      rdsPanel: document.getElementById("rds-panel"),
       appPanel: document.getElementById("app-panel"),
       authMessage: document.getElementById("auth-message"),
+      rdsHeading: document.getElementById("rds-heading"),
+      rdsMessage: document.getElementById("rds-message"),
+      rdsStartButton: document.getElementById("rds-start-button"),
+      rdsReloadButton: document.getElementById("rds-reload-button"),
+      rdsAutoStop: document.getElementById("rds-auto-stop"),
       sessionUser: document.getElementById("session-user"),
       loginButton: document.getElementById("login-button"),
       logoutButton: document.getElementById("logout-button"),
@@ -1198,6 +1427,8 @@
   function bindEvents() {
     els.loginButton.addEventListener("click", login);
     els.logoutButton.addEventListener("click", logout);
+    els.rdsStartButton.addEventListener("click", startRds);
+    els.rdsReloadButton.addEventListener("click", initializeEditor);
     els.exportJsonButton.addEventListener("click", exportPublicJson);
     els.newRowButton.addEventListener("click", startCreate);
     els.reloadButton.addEventListener("click", loadRows);
@@ -1225,6 +1456,12 @@
       loadRows();
       els.searchInput.focus();
     });
+
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) sendHeartbeat();
+    });
+
+    window.addEventListener("beforeunload", stopHeartbeat);
   }
 
   document.addEventListener("DOMContentLoaded", async () => {
@@ -1239,16 +1476,7 @@
     }
 
     if (renderAuthState()) {
-      let lookupError = null;
-      try {
-        await loadLookupOptions();
-      } catch (err) {
-        lookupError = err;
-      }
-      await loadRows();
-      if (lookupError) {
-        setStatus(`コードマスタの読み込みに失敗しました。${lookupError.message || String(lookupError)}`);
-      }
+      await initializeEditor();
     }
   });
 })();

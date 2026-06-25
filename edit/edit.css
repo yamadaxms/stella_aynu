@@ -107,6 +107,11 @@ textarea:focus-visible {
   white-space: nowrap;
 }
 
+.rds-auto-stop {
+  max-width: 20rem;
+  color: #ccfbf1;
+}
+
 .button {
   display: inline-flex;
   align-items: center;
@@ -180,6 +185,13 @@ textarea:focus-visible {
 .auth-panel h2 {
   margin: 0 0 0.45rem;
   font-size: 1.1rem;
+}
+
+.rds-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
 }
 
 .edit-workspace {
