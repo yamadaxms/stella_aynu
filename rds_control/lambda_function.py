@@ -22,7 +22,6 @@ BASE_RESPONSE_HEADERS = {
 
 DEFAULT_RDS_ACTIVITY_KEY = "state/rds-activity.json"
 DEFAULT_RDS_IDLE_MINUTES = 30
-DEFAULT_RDS_MAX_RUNNING_HOURS = 6
 
 
 def get_request_header(event, header_name):
@@ -257,6 +256,13 @@ def get_s3_client():
     return boto3.client("s3")
 
 
+def get_cloudwatch_client():
+    """CloudWatch APIクライアントを作成する。"""
+    import boto3
+
+    return boto3.client("cloudwatch")
+
+
 def get_rds_status():
     """RDS DBインスタンスの現在状態を返す。"""
     result = get_rds_client().describe_db_instances(
@@ -266,6 +272,29 @@ def get_rds_status():
     if not instances:
         raise RuntimeError("RDS DBインスタンスが見つかりません")
     return str(instances[0].get("DBInstanceStatus") or "unknown")
+
+
+def get_database_connections():
+    """直近5分間のRDS DatabaseConnections最大値を返す。"""
+    now = utc_now()
+    result = get_cloudwatch_client().get_metric_statistics(
+        Namespace="AWS/RDS",
+        MetricName="DatabaseConnections",
+        Dimensions=[
+            {
+                "Name": "DBInstanceIdentifier",
+                "Value": get_rds_instance_id(),
+            }
+        ],
+        StartTime=now - timedelta(minutes=5),
+        EndTime=now,
+        Period=60,
+        Statistics=["Maximum"],
+    )
+    datapoints = result.get("Datapoints") or []
+    if not datapoints:
+        return 0
+    return int(max(point.get("Maximum", 0) for point in datapoints))
 
 
 def normalize_activity_timestamp(value):
@@ -313,7 +342,7 @@ def write_activity_state(state):
 
 
 def start_rds_if_stopped():
-    """RDSが停止中なら起動要求を送り、startedAtをS3 stateへ記録する。"""
+    """RDSが停止中なら起動要求を送り、起動時刻をS3 stateへ記録する。"""
     status = get_rds_status()
     if status != "stopped":
         result = build_rds_status_response(status)
@@ -325,6 +354,7 @@ def start_rds_if_stopped():
     activity = read_activity_state()
     started_at = to_utc_iso(utc_now())
     activity["startedAt"] = started_at
+    activity["lastActiveAt"] = started_at
     write_activity_state(activity)
 
     result = build_rds_status_response("starting", activity=activity)
@@ -361,26 +391,19 @@ def calculate_auto_stop_at(activity, now, status):
         return None
 
     last_active_value = activity.get("lastActiveAt") if isinstance(activity, dict) else None
-    started_value = activity.get("startedAt") if isinstance(activity, dict) else None
-    if not activity or (not last_active_value and not started_value):
+    activity_baseline_value = last_active_value or (
+        activity.get("startedAt") if isinstance(activity, dict) else None
+    )
+    if not activity or not activity_baseline_value:
         return now
 
-    deadlines = []
     idle_minutes = get_positive_number_env("RDS_IDLE_MINUTES", DEFAULT_RDS_IDLE_MINUTES)
-    max_running_hours = get_positive_number_env(
-        "RDS_MAX_RUNNING_HOURS",
-        DEFAULT_RDS_MAX_RUNNING_HOURS,
-    )
 
-    last_active_at = parse_utc_iso(last_active_value)
-    if last_active_at:
-        deadlines.append(last_active_at + timedelta(minutes=idle_minutes))
+    activity_baseline_at = parse_utc_iso(activity_baseline_value)
+    if activity_baseline_at:
+        return activity_baseline_at + timedelta(minutes=idle_minutes)
 
-    started_at = parse_utc_iso(started_value)
-    if started_at:
-        deadlines.append(started_at + timedelta(hours=max_running_hours))
-
-    return min(deadlines) if deadlines else None
+    return None
 
 
 def build_rds_status_response(status, activity=None, now=None):
@@ -402,30 +425,24 @@ def build_rds_status_response(status, activity=None, now=None):
 def get_auto_stop_reasons(activity, now):
     """S3 stateと環境変数からRDS停止理由を判定する。"""
     last_active_value = activity.get("lastActiveAt") if isinstance(activity, dict) else None
-    started_value = activity.get("startedAt") if isinstance(activity, dict) else None
-    if not activity or (not last_active_value and not started_value):
+    activity_baseline_value = last_active_value or (
+        activity.get("startedAt") if isinstance(activity, dict) else None
+    )
+    if not activity or not activity_baseline_value:
         return ["no-activity-state"]
 
     reasons = []
     idle_minutes = get_positive_number_env("RDS_IDLE_MINUTES", DEFAULT_RDS_IDLE_MINUTES)
-    max_running_hours = get_positive_number_env(
-        "RDS_MAX_RUNNING_HOURS",
-        DEFAULT_RDS_MAX_RUNNING_HOURS,
-    )
 
-    last_active_at = parse_utc_iso(last_active_value)
-    if last_active_at and now - last_active_at >= timedelta(minutes=idle_minutes):
+    activity_baseline_at = parse_utc_iso(activity_baseline_value)
+    if activity_baseline_at and now - activity_baseline_at >= timedelta(minutes=idle_minutes):
         reasons.append("idle-timeout")
-
-    started_at = parse_utc_iso(started_value)
-    if started_at and now - started_at >= timedelta(hours=max_running_hours):
-        reasons.append("max-running-time")
 
     return reasons
 
 
 def auto_stop_rds_handler(event, context):
-    """EventBridge Schedulerから定期実行し、未利用または長時間起動中のRDSを停止する。"""
+    """EventBridge Schedulerから定期実行し、未利用状態のRDSを停止する。"""
     checked_at = utc_now()
     status = get_rds_status()
     result = {
@@ -445,6 +462,12 @@ def auto_stop_rds_handler(event, context):
 
     if not reasons:
         logger.info("Skip RDS auto stop because activity is still within thresholds")
+        return result
+
+    connections = get_database_connections()
+    result["databaseConnections"] = connections
+    if connections > 0:
+        logger.info("Skip RDS auto stop because database connections exist: %s", connections)
         return result
 
     get_rds_client().stop_db_instance(DBInstanceIdentifier=get_rds_instance_id())
