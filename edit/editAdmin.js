@@ -558,7 +558,15 @@
   }
 
   function normalizeRdsStatus(status) {
-    return String(status || "unknown").trim().toLowerCase() || "unknown";
+    const normalized = String(status || "stopped").trim().toLowerCase();
+    if (normalized === "available" || normalized === "checking" || normalized === "starting") {
+      return normalized;
+    }
+    return "stopped";
+  }
+
+  function getRdsAvailabilityStatus(status) {
+    return String(status || "").trim().toLowerCase() === "available" ? "available" : "stopped";
   }
 
   function updateRdsStatusDetail(data = {}) {
@@ -597,44 +605,26 @@
         canReload: false,
       },
       stopped: {
-        heading: "データベースは停止中です",
-        message: "データベースは停止中です。起動してから編集してください。",
+        heading: "データベースは未起動です",
+        message: "RDSを起動してから編集してください。",
         canStart: true,
         canReload: false,
       },
       starting: {
         heading: "データベースを起動中です",
-        message: "起動中です。30秒ごとに状態を確認しています。",
+        message: "画面遷移するまでしばらくお待ちください",
         canStart: false,
         canReload: false,
       },
-      stopping: {
-        heading: "データベースを停止中です",
-        message: "停止処理中です。しばらくしてから再読み込みしてください。",
-        canStart: false,
-        canReload: true,
-      },
-      error: {
-        heading: "RDS状態を確認できませんでした",
-        message: "RDS状態確認APIの応答を確認してください。",
-        canStart: false,
-        canReload: true,
-      },
-      unknown: {
-        heading: "RDS状態を確認できませんでした",
-        message: "未対応のRDS状態です。しばらくしてから再読み込みしてください。",
-        canStart: false,
-        canReload: true,
-      },
     };
-    const current = content[normalizedStatus] || content.unknown;
+    const current = content[normalizedStatus] || content.stopped;
 
     els.rdsHeading.textContent = current.heading;
     els.rdsMessage.textContent = message || current.message;
     els.rdsStartButton.hidden = !current.canStart;
     els.rdsStartButton.disabled = false;
     els.rdsReloadButton.hidden = !current.canReload;
-    els.rdsReloadButton.disabled = normalizedStatus === "checking";
+    els.rdsReloadButton.disabled = true;
   }
 
   function renderRdsState(status, message = "") {
@@ -671,20 +661,16 @@
     els.rdsStartButton.disabled = true;
     els.rdsReloadButton.disabled = true;
     els.rdsReloadButton.hidden = true;
-    els.rdsMessage.textContent = "RDS起動要求を送信しています。";
+    els.rdsMessage.textContent = "画面遷移するまでしばらくお待ちください";
 
     try {
       const result = await apiRequest(buildRdsStartUrl(), { method: "POST" });
       updateRdsStatusDetail(result);
-      const nextStatus = normalizeRdsStatus(result.status || "starting");
-      if (nextStatus === "available") {
+      if (getRdsAvailabilityStatus(result.status) === "available") {
         await initializeEditor();
         return;
       }
-      renderRdsState(
-        nextStatus,
-        result.action === "start-requested" ? "RDS起動要求を受け付けました。30秒ごとに状態を確認します。" : "",
-      );
+      renderRdsState("starting", "画面遷移するまでしばらくお待ちください");
     } catch (err) {
       if (!getValidSession()) return;
       renderRdsState("stopped", err.message || String(err));
@@ -749,21 +735,21 @@
       const data = await getRdsStatus();
       if (runId !== rdsStartPollRunId) return;
 
-      const nextStatus = normalizeRdsStatus(data.status);
-      if (nextStatus === "available") {
+      if (getRdsAvailabilityStatus(data.status) === "available") {
         stopRdsStartPolling();
         await initializeEditor();
         return;
       }
 
-      renderRdsState(nextStatus);
+      setRdsPanel("starting");
     } catch (err) {
       if (runId !== rdsStartPollRunId) return;
       if (!getValidSession()) {
         stopRdsStartPolling();
         return;
       }
-      setRdsPanel("starting", `RDS状態の確認に失敗しました。30秒後に再試行します。${err.message || String(err)}`);
+      console.warn("RDS start polling failed", err);
+      setRdsPanel("starting");
     } finally {
       if (runId === rdsStartPollRunId) {
         rdsStartPollInFlight = false;
@@ -779,11 +765,11 @@
       rdsStatusData = await getRdsStatus();
     } catch (err) {
       if (!getValidSession()) return;
-      renderRdsState("error", err.message || String(err));
+      renderRdsState("stopped", err.message || String(err));
       return;
     }
 
-    const rdsStatus = normalizeRdsStatus(rdsStatusData.status);
+    const rdsStatus = getRdsAvailabilityStatus(rdsStatusData.status);
     renderRdsState(rdsStatus);
     if (rdsStatus !== "available") return;
 
