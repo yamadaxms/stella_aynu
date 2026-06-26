@@ -13,6 +13,7 @@
   const PKCE_KEY_PREFIX = "aynuEditPkce:";
   const SEARCH_DEBOUNCE_MS = 250;
   const HEARTBEAT_INTERVAL_MS = normalizeHeartbeatInterval(CONFIG.heartbeatIntervalMs);
+  const RDS_START_POLL_INTERVAL_MS = 30_000;
   const DELETE_ENABLED = false;
   const JST_TIME_ZONE = "Asia/Tokyo";
   const LIST_SORT_COLLATOR = new Intl.Collator("ja", {
@@ -217,6 +218,9 @@
   let searchTimer = 0;
   let heartbeatTimer = 0;
   let heartbeatInFlight = false;
+  let rdsStartPollTimer = 0;
+  let rdsStartPollInFlight = false;
+  let rdsStartPollRunId = 0;
 
   function getTableDefinition(name = state.tableName) {
     return TABLES.find((table) => table.name === name) || TABLES[0];
@@ -368,6 +372,8 @@
 
   async function logout() {
     clearSession();
+    stopRdsStartPolling();
+    stopHeartbeat();
 
     if (getAuthConfigReady()) {
       const params = new URLSearchParams({
@@ -435,17 +441,19 @@
     const userName = claims.email || claims["cognito:username"] || claims.username || "ログイン済み";
 
     if (session) {
+      const isEditorReady = state.rdsStatus === "available";
       els.authPanel.hidden = true;
-      els.rdsPanel.hidden = state.rdsStatus === "available";
-      els.appPanel.hidden = state.rdsStatus !== "available";
+      els.rdsPanel.hidden = isEditorReady;
+      els.appPanel.hidden = !isEditorReady;
       els.loginButton.hidden = true;
       els.logoutButton.hidden = false;
-      els.exportJsonButton.hidden = state.rdsStatus !== "available";
+      els.exportJsonButton.hidden = !isEditorReady;
       els.sessionUser.textContent = userName;
       return true;
     }
 
     stopHeartbeat();
+    stopRdsStartPolling();
     state.rdsStatus = "unknown";
     updateRdsStatusDetail({});
     els.authPanel.hidden = false;
@@ -586,31 +594,37 @@
         heading: "RDS状態を確認中です",
         message: "データベース状態を確認しています。",
         canStart: false,
+        canReload: false,
       },
       stopped: {
         heading: "データベースは停止中です",
         message: "データベースは停止中です。起動してから編集してください。",
         canStart: true,
+        canReload: false,
       },
       starting: {
         heading: "データベースを起動中です",
-        message: "起動中です。数分後に再読み込みしてください。",
+        message: "起動中です。30秒ごとに状態を確認しています。",
         canStart: false,
+        canReload: false,
       },
       stopping: {
         heading: "データベースを停止中です",
         message: "停止処理中です。しばらくしてから再読み込みしてください。",
         canStart: false,
+        canReload: true,
       },
       error: {
         heading: "RDS状態を確認できませんでした",
         message: "RDS状態確認APIの応答を確認してください。",
         canStart: false,
+        canReload: true,
       },
       unknown: {
         heading: "RDS状態を確認できませんでした",
         message: "未対応のRDS状態です。しばらくしてから再読み込みしてください。",
         canStart: false,
+        canReload: true,
       },
     };
     const current = content[normalizedStatus] || content.unknown;
@@ -619,6 +633,7 @@
     els.rdsMessage.textContent = message || current.message;
     els.rdsStartButton.hidden = !current.canStart;
     els.rdsStartButton.disabled = false;
+    els.rdsReloadButton.hidden = !current.canReload;
     els.rdsReloadButton.disabled = normalizedStatus === "checking";
   }
 
@@ -626,6 +641,9 @@
     state.rdsStatus = normalizeRdsStatus(status);
 
     const isAvailable = state.rdsStatus === "available";
+    if (isAvailable) {
+      stopRdsStartPolling();
+    }
     els.rdsPanel.hidden = isAvailable;
     els.appPanel.hidden = !isAvailable;
     els.exportJsonButton.hidden = !isAvailable;
@@ -634,6 +652,11 @@
     if (!isAvailable) {
       stopHeartbeat();
       setRdsPanel(state.rdsStatus, message);
+      if (state.rdsStatus === "starting") {
+        startRdsStartPolling();
+      } else {
+        stopRdsStartPolling();
+      }
     }
   }
 
@@ -644,8 +667,10 @@
   }
 
   async function startRds() {
+    stopRdsStartPolling();
     els.rdsStartButton.disabled = true;
     els.rdsReloadButton.disabled = true;
+    els.rdsReloadButton.hidden = true;
     els.rdsMessage.textContent = "RDS起動要求を送信しています。";
 
     try {
@@ -658,7 +683,7 @@
       }
       renderRdsState(
         nextStatus,
-        result.action === "start-requested" ? "RDS起動要求を受け付けました。数分後に再読み込みしてください。" : "",
+        result.action === "start-requested" ? "RDS起動要求を受け付けました。30秒ごとに状態を確認します。" : "",
       );
     } catch (err) {
       if (!getValidSession()) return;
@@ -696,6 +721,54 @@
     if (!heartbeatTimer) return;
     window.clearInterval(heartbeatTimer);
     heartbeatTimer = 0;
+  }
+
+  function startRdsStartPolling() {
+    if (rdsStartPollTimer) return;
+
+    const runId = ++rdsStartPollRunId;
+    rdsStartPollTimer = window.setInterval(() => {
+      pollRdsStartStatus(runId);
+    }, RDS_START_POLL_INTERVAL_MS);
+  }
+
+  function stopRdsStartPolling() {
+    if (rdsStartPollTimer) {
+      window.clearInterval(rdsStartPollTimer);
+      rdsStartPollTimer = 0;
+    }
+    rdsStartPollRunId += 1;
+    rdsStartPollInFlight = false;
+  }
+
+  async function pollRdsStartStatus(runId) {
+    if (rdsStartPollInFlight) return;
+
+    rdsStartPollInFlight = true;
+    try {
+      const data = await getRdsStatus();
+      if (runId !== rdsStartPollRunId) return;
+
+      const nextStatus = normalizeRdsStatus(data.status);
+      if (nextStatus === "available") {
+        stopRdsStartPolling();
+        await initializeEditor();
+        return;
+      }
+
+      renderRdsState(nextStatus);
+    } catch (err) {
+      if (runId !== rdsStartPollRunId) return;
+      if (!getValidSession()) {
+        stopRdsStartPolling();
+        return;
+      }
+      setRdsPanel("starting", `RDS状態の確認に失敗しました。30秒後に再試行します。${err.message || String(err)}`);
+    } finally {
+      if (runId === rdsStartPollRunId) {
+        rdsStartPollInFlight = false;
+      }
+    }
   }
 
   async function initializeEditor() {
@@ -1461,7 +1534,10 @@
       if (!document.hidden) sendHeartbeat();
     });
 
-    window.addEventListener("beforeunload", stopHeartbeat);
+    window.addEventListener("beforeunload", () => {
+      stopHeartbeat();
+      stopRdsStartPolling();
+    });
   }
 
   document.addEventListener("DOMContentLoaded", async () => {
