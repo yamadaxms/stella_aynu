@@ -278,7 +278,8 @@ def fetch_constellations(conn):
             sal.star_culture_id,
             sal.astro_name,
             am.constellation,
-            am.astro_cd
+            am.astro_cd,
+            am.memo
         FROM star_astro_link sal
         LEFT JOIN astro_master am
           ON am.astro_name = sal.astro_name
@@ -290,8 +291,11 @@ def fetch_constellations(conn):
         """
         SELECT
             sal.star_culture_id,
-            sal.area_name
+            sal.area_name,
+            al.memo
         FROM star_area_link sal
+        LEFT JOIN area_list al
+          ON al.area_name = sal.area_name
         ORDER BY
             sal.star_culture_id,
             CASE sal.area_name
@@ -319,6 +323,7 @@ def fetch_constellations(conn):
             sl.publication_date,
             sl.publication_area,
             sl.url,
+            sl.memo,
             sl.source_cd
         FROM star_source_link ssl
         JOIN source_list sl
@@ -335,6 +340,7 @@ def fetch_constellations(conn):
             stl.tradition_title,
             tl.tradition_content,
             tl.tradition_area,
+            tl.memo,
             tsl.source_name
         FROM star_tradition_link stl
         JOIN tradition_list tl
@@ -360,6 +366,7 @@ def fetch_constellations(conn):
             swl.word_ja,
             wm.word_en,
             wm.word_meaning,
+            wm.memo,
             wsl.source_name
         FROM star_word_link swl
         LEFT JOIN word_master wm
@@ -395,6 +402,7 @@ def fetch_constellations(conn):
                 {
                     "astro_name": astro_name,
                     "constellation": to_text(row["constellation"]),
+                    "memo": to_text(row["memo"]),
                 }
             )
 
@@ -416,6 +424,7 @@ def fetch_constellations(conn):
         area_links_by_culture.setdefault(row["star_culture_id"], []).append(
             {
                 "area_name": area_name,
+                "memo": to_text(row["memo"]),
             }
         )
 
@@ -433,6 +442,7 @@ def fetch_constellations(conn):
                     "publication_date": to_date_text(row["publication_date"]),
                     "publication_area": to_text(row["publication_area"]),
                     "url": to_public_url(row["url"]),
+                    "memo": to_text(row["memo"]),
                 }
             )
 
@@ -446,6 +456,7 @@ def fetch_constellations(conn):
                     "tradition_content": to_text(row["tradition_content"]),
                     "tradition_area": to_text(row["tradition_area"]),
                     "source_name": to_text(row["source_name"]),
+                    "memo": to_text(row["memo"]),
                 }
             )
 
@@ -459,6 +470,7 @@ def fetch_constellations(conn):
                     "word_ja": word_ja,
                     "word_en": to_text(row["word_en"]),
                     "word_meaning": to_text(row["word_meaning"]),
+                    "memo": to_text(row["memo"]),
                     "source_name": to_text(row["source_name"]),
                 }
             )
@@ -467,7 +479,7 @@ def fetch_constellations(conn):
     for row in culture_rows:
         constellation_key = row["constellation_key"]
         line_groups = lines_by_constellation.get(constellation_key, {})
-        # 説明文は公開対象の意味・原義のみから作り、管理用メモは公開APIへ載せない。
+        # 説明文は公開対象の意味・原義のみから作り、星文化情報本体の管理用メモは公開APIへ載せない。
         description = row["meaning"] or row["original_meaning"] or ""
 
         constellations.append(

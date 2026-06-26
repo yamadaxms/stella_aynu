@@ -177,6 +177,7 @@
       columns: [
         { label: "天体名称", keys: ["astro_name", "astroName", "name"] },
         { label: "所属星座", keys: ["constellation"] },
+        { label: "メモ", keys: ["memo", "astro_memo", "astroMemo"] },
       ],
     },
     {
@@ -191,6 +192,7 @@
         { label: "発行/採集年月日", keys: ["publication_date", "publicationDate"] },
         { label: "採集地域", keys: ["publication_area", "publicationArea"] },
         { label: "URL", keys: ["url"], type: "url" },
+        { label: "メモ", keys: ["memo", "source_memo", "sourceMemo"] },
       ],
     },
     {
@@ -201,6 +203,7 @@
         { label: "伝承内容", keys: ["tradition_content", "traditionContent", "content"] },
         { label: "伝承地域", keys: ["tradition_area", "traditionArea"] },
         { label: "出典名", keys: ["source_name", "sourceName"] },
+        { label: "メモ", keys: ["memo", "tradition_memo", "traditionMemo"] },
       ],
     },
     {
@@ -208,6 +211,7 @@
       fields: ["star_area_link", "star_area_links", "area_links", "area_names"],
       columns: [
         { label: "地域名称", keys: ["area_name", "areaName", "name"] },
+        { label: "メモ", keys: ["memo", "area_memo", "areaMemo"] },
       ],
     },
     {
@@ -217,6 +221,7 @@
         { label: "単語", keys: ["word_ja", "wordJa"] },
         { label: "単語（英字）", keys: ["word_en", "wordEn"] },
         { label: "意味", keys: ["word_meaning", "wordMeaning"] },
+        { label: "メモ", keys: ["memo", "word_memo", "wordMemo"] },
         { label: "出典名", keys: ["source_name", "sourceName"] },
       ],
     },
@@ -224,7 +229,6 @@
 
   function renderBasic(item) {
     els.basic.textContent = "";
-    appendBasicRow("星文化ID", getField(item, "star_culture_id") || getCultureKey(item));
     appendBasicRow("名称", getField(item, "name_ja") || getField(item, "name"));
     appendBasicRow("名称（英字）", getField(item, "name_en"));
     appendBasicRow("意味", getField(item, "meaning") || getField(item, "description"));
