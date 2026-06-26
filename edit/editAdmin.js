@@ -207,11 +207,6 @@
     sortDirection: "asc",
     isDefaultSort: true,
     rdsStatus: "unknown",
-    rdsStatusDetail: {
-      startedAt: null,
-      lastActiveAt: null,
-      autoStopAt: null,
-    },
   };
 
   const els = {};
@@ -455,7 +450,6 @@
     stopHeartbeat();
     stopRdsStartPolling();
     state.rdsStatus = "unknown";
-    updateRdsStatusDetail({});
     els.authPanel.hidden = false;
     els.rdsPanel.hidden = true;
     els.appPanel.hidden = true;
@@ -569,32 +563,6 @@
     return String(status || "").trim().toLowerCase() === "available" ? "available" : "stopped";
   }
 
-  function updateRdsStatusDetail(data = {}) {
-    state.rdsStatusDetail = {
-      startedAt: data.startedAt || null,
-      lastActiveAt: data.lastActiveAt || null,
-      autoStopAt: data.autoStopAt || null,
-    };
-    renderRdsAutoStop();
-  }
-
-  function renderRdsAutoStop() {
-    if (!els.rdsAutoStop) return;
-
-    const autoStopAt = state.rdsStatusDetail.autoStopAt;
-    if (state.rdsStatus !== "available" || !autoStopAt) {
-      els.rdsAutoStop.hidden = true;
-      els.rdsAutoStop.textContent = "";
-      els.rdsAutoStop.removeAttribute("title");
-      return;
-    }
-
-    const text = `自動停止予定 ${formatDateTime(autoStopAt)}`;
-    els.rdsAutoStop.hidden = false;
-    els.rdsAutoStop.textContent = text;
-    els.rdsAutoStop.title = text;
-  }
-
   function setRdsPanel(status, message = "") {
     const normalizedStatus = normalizeRdsStatus(status);
     const content = {
@@ -637,7 +605,6 @@
     els.rdsPanel.hidden = isAvailable;
     els.appPanel.hidden = !isAvailable;
     els.exportJsonButton.hidden = !isAvailable;
-    renderRdsAutoStop();
 
     if (!isAvailable) {
       stopHeartbeat();
@@ -651,9 +618,7 @@
   }
 
   async function getRdsStatus() {
-    const data = await apiRequest(buildRdsStatusUrl());
-    updateRdsStatusDetail(data);
-    return data;
+    return apiRequest(buildRdsStatusUrl());
   }
 
   async function startRds() {
@@ -665,7 +630,6 @@
 
     try {
       const result = await apiRequest(buildRdsStartUrl(), { method: "POST" });
-      updateRdsStatusDetail(result);
       if (getRdsAvailabilityStatus(result.status) === "available") {
         await initializeEditor();
         return;
@@ -683,12 +647,9 @@
     heartbeatInFlight = true;
     try {
       const result = await apiRequest(buildHeartbeatUrl(), { method: "POST" });
-      updateRdsStatusDetail(result);
       const nextStatus = normalizeRdsStatus(result.status || state.rdsStatus);
       if (nextStatus !== state.rdsStatus) {
         renderRdsState(nextStatus);
-      } else {
-        renderRdsAutoStop();
       }
     } catch (err) {
       console.warn("heartbeat failed", err);
@@ -1456,7 +1417,6 @@
       rdsMessage: document.getElementById("rds-message"),
       rdsStartButton: document.getElementById("rds-start-button"),
       rdsReloadButton: document.getElementById("rds-reload-button"),
-      rdsAutoStop: document.getElementById("rds-auto-stop"),
       sessionUser: document.getElementById("session-user"),
       loginButton: document.getElementById("login-button"),
       logoutButton: document.getElementById("logout-button"),
