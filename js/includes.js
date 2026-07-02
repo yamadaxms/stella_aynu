@@ -3,10 +3,10 @@
   // 共通ヘッダー読み込み
   // ============================================================
   // index.html / notes.html / references.html で同じヘッダーを使い回すため、
-  // プレースホルダー要素を partials/site-header.html の内容で置き換える。
+  // プレースホルダー要素を site-header.html の内容で置き換える。
   // 静的HTMLのまま共通部品化しているため、fetch が使えない file:// 直開きでは失敗する場合がある。
   const HEADER_PLACEHOLDER_ID = "site-header-include";
-  const HEADER_PARTIAL_PATH = "partials/site-header.html";
+  const HEADER_PARTIAL_PATH = "site-header.html";
 
   function inferCurrentPage() {
     // パス末尾のファイル名を現在ページとして扱う。
