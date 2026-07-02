@@ -2,7 +2,7 @@ import base64
 import json
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, unquote
 
 import psycopg2
@@ -34,6 +34,7 @@ BASE_RESPONSE_HEADERS = {
     "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
     "Content-Type": "application/json; charset=utf-8",
 }
+JST = timezone(timedelta(hours=9))
 
 
 def get_request_header(event, header_name):
@@ -214,6 +215,48 @@ def get_admin_account(event):
     return str(claims.get("email") or "").strip()
 
 
+def build_archive_object_key(object_key, last_modified):
+    """元オブジェクトの更新日時（JST）を付けた退避先キーを作る。"""
+    if last_modified.tzinfo is None:
+        last_modified = last_modified.replace(tzinfo=timezone.utc)
+    timestamp = last_modified.astimezone(JST).strftime("%Y%m%d_%H%M%S")
+
+    directory, separator, filename = object_key.rpartition("/")
+    stem, extension_separator, extension = filename.rpartition(".")
+    if not extension_separator:
+        stem = filename
+    archived_filename = f"{stem}_{timestamp}"
+    if extension_separator:
+        archived_filename += f".{extension}"
+
+    return f"{directory}{separator}{archived_filename}"
+
+
+def archive_existing_public_json(s3_client, bucket, object_key):
+    """既存の公開JSONがあれば、最終更新日時付きのキーへコピーする。"""
+    from botocore.exceptions import ClientError
+
+    try:
+        current_object = s3_client.head_object(Bucket=bucket, Key=object_key)
+    except ClientError as error:
+        error_code = str(error.response.get("Error", {}).get("Code", ""))
+        if error_code in {"404", "NoSuchKey", "NotFound"}:
+            return None
+        raise
+
+    archived_key = build_archive_object_key(object_key, current_object["LastModified"])
+    copy_args = {
+        "Bucket": bucket,
+        "Key": archived_key,
+        "CopySource": {"Bucket": bucket, "Key": object_key},
+    }
+    if current_object.get("ETag"):
+        # HeadObject後に元オブジェクトが変更された場合は、誤った日時名で退避しない。
+        copy_args["CopySourceIfMatch"] = current_object["ETag"]
+    s3_client.copy_object(**copy_args)
+    return archived_key
+
+
 def export_public_json():
     """DBから公開データを生成し、静的配信用のS3オブジェクトを更新する。"""
     bucket = os.environ.get("AYNU_PUBLIC_DATA_BUCKET", "").strip()
@@ -230,7 +273,9 @@ def export_public_json():
     # boto3はLambdaランタイム同梱版を使い、デプロイZIPを不要に肥大化させない。
     import boto3
 
-    result = boto3.client("s3").put_object(
+    s3_client = boto3.client("s3")
+    archived_key = archive_existing_public_json(s3_client, bucket, object_key)
+    result = s3_client.put_object(
         Bucket=bucket,
         Key=object_key,
         Body=encoded,
@@ -246,6 +291,7 @@ def export_public_json():
         "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "bucket": bucket,
         "key": object_key,
+        "archivedKey": archived_key,
         "bytes": len(encoded),
         "etag": str(result.get("ETag") or "").strip('"'),
         "counts": {
