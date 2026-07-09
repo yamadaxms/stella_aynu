@@ -264,7 +264,8 @@
 }
 
 .star-culture-detail-table {
-  min-width: 0;
+  min-width: 760px;
+  table-layout: fixed;
 }
 
 .star-culture-related-table {
@@ -325,7 +326,7 @@
 }
 
 .star-culture-detail-table th {
-  width: 13rem;
+  width: 12rem;
   white-space: nowrap;
 }
 

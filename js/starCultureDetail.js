@@ -89,8 +89,7 @@
     els.status.hidden = !message;
   }
 
-  function appendBasicRow(label, value) {
-    const tr = document.createElement("tr");
+  function appendBasicCell(tr, label, value) {
     const th = document.createElement("th");
     const td = document.createElement("td");
 
@@ -100,6 +99,13 @@
 
     tr.appendChild(th);
     tr.appendChild(td);
+  }
+
+  function appendBasicPairRow(left, right) {
+    const tr = document.createElement("tr");
+
+    appendBasicCell(tr, left.label, left.value);
+    appendBasicCell(tr, right.label, right.value);
     els.basic.appendChild(tr);
   }
 
@@ -229,12 +235,18 @@
 
   function renderBasic(item) {
     els.basic.textContent = "";
-    appendBasicRow("名称", getField(item, "name_ja") || getField(item, "name"));
-    appendBasicRow("名称（英字）", getField(item, "name_en"));
-    appendBasicRow("意味", getField(item, "meaning") || getField(item, "description"));
-    appendBasicRow("オリジナル名称", getField(item, "original_name_ja"));
-    appendBasicRow("オリジナル名称（英字）", getField(item, "original_name_en"));
-    appendBasicRow("オリジナル意味", getField(item, "original_meaning"));
+    appendBasicPairRow(
+      { label: "名称", value: getField(item, "name_ja") || getField(item, "name") },
+      { label: "オリジナル名称", value: getField(item, "original_name_ja") },
+    );
+    appendBasicPairRow(
+      { label: "名称（英字）", value: getField(item, "name_en") },
+      { label: "オリジナル名称（英字）", value: getField(item, "original_name_en") },
+    );
+    appendBasicPairRow(
+      { label: "意味", value: getField(item, "meaning") || getField(item, "description") },
+      { label: "オリジナル意味", value: getField(item, "original_meaning") },
+    );
   }
 
   function renderRelated(item) {
