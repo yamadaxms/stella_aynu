@@ -241,6 +241,49 @@
     }
   }
 
+  function pushSearchText(value, out) {
+    const text = String(value ?? "").trim();
+    if (text) out.push(text);
+  }
+
+  function collectAstroSearchTextsFrom(value, out) {
+    if (!value) return;
+
+    if (Array.isArray(value)) {
+      for (const item of value) collectAstroSearchTextsFrom(item, out);
+      return;
+    }
+
+    if (typeof value === "string") {
+      pushSearchText(value, out);
+      return;
+    }
+
+    if (typeof value === "object") {
+      const values = [
+        value.astro_name,
+        value.astroName,
+        value.name,
+        value.constellation,
+        value.memo,
+        value.astro_memo,
+        value.astroMemo,
+        value.star?.astro_name,
+        value.star?.astroName,
+        value.star?.name,
+        value.star?.constellation,
+        value.star?.memo,
+        value.astro?.name,
+        value.astro?.astro_name,
+        value.astro?.astroName,
+        value.astro?.constellation,
+        value.astro?.memo,
+      ];
+
+      for (const text of values) pushSearchText(text, out);
+    }
+  }
+
   function getAstroNames(item) {
     const names = [];
     collectAstroNamesFrom(item?.star_astro_link, names);
@@ -250,6 +293,17 @@
     collectAstroNamesFrom(item?.related_astro_names, names);
 
     return Array.from(new Set(names.filter(Boolean)));
+  }
+
+  function getAstroSearchTexts(item) {
+    const texts = [];
+    collectAstroSearchTextsFrom(item?.star_astro_link, texts);
+    collectAstroSearchTextsFrom(item?.star_astro_links, texts);
+    collectAstroSearchTextsFrom(item?.astro_names, texts);
+    collectAstroSearchTextsFrom(item?.astroNames, texts);
+    collectAstroSearchTextsFrom(item?.related_astro_names, texts);
+
+    return Array.from(new Set(texts.filter(Boolean)));
   }
 
   function formatAstroNames(item) {
@@ -317,7 +371,7 @@
     return state.constellations.filter((item) => {
       if (!isPublished(item)) return false;
 
-      const astroNames = getAstroNames(item).join(",");
+      const astroTexts = getAstroSearchTexts(item).join(",");
       const queryTargets = [
         getName(item),
         getNameEn(item),
@@ -326,7 +380,7 @@
         getOriginalNameJa(item),
         getOriginalNameEn(item),
         getOriginalMeaning(item),
-        astroNames,
+        astroTexts,
       ];
       const matchesQuery = !query || queryTargets.some((value) => normalizeText(value).includes(query));
 
