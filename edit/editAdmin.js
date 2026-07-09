@@ -192,16 +192,6 @@
     },
   ];
 
-  const STAR_CULTURE_NAME_FIELDS = [
-    "name_ja",
-    "original_name_ja",
-    "name_en",
-    "original_name_en",
-    "meaning",
-    "original_meaning",
-  ];
-  const STAR_CULTURE_NAME_FIELD_SET = new Set(STAR_CULTURE_NAME_FIELDS);
-
   const state = {
     tableName: TABLES[0].name,
     rows: [],
@@ -1011,7 +1001,6 @@
   function createField(column, value) {
     const wrapper = document.createElement("div");
     wrapper.className = "editor-field";
-    wrapper.dataset.field = column.name;
     const isPrimaryKeyInEdit = column.name === getTableDefinition().primaryKey && state.mode === "edit";
 
     const label = document.createElement("label");
@@ -1095,19 +1084,6 @@
 
     input.value = value ?? "";
     wrapper.appendChild(input);
-
-    return wrapper;
-  }
-
-  function createStarCultureNameGrid(table, row) {
-    const wrapper = document.createElement("div");
-    wrapper.className = "star-culture-name-grid";
-
-    STAR_CULTURE_NAME_FIELDS.forEach((fieldName) => {
-      const column = getColumnDefinition(table, fieldName);
-      if (!column) return;
-      wrapper.appendChild(createField(column, row[column.name]));
-    });
 
     return wrapper;
   }
@@ -1251,21 +1227,9 @@
 
   function renderEditor(row = {}) {
     const table = getTableDefinition();
-    const useStarCultureNameGrid = table.name === "star_culture";
-    let nameGridInserted = false;
-
     els.editorFields.textContent = "";
     table.columns.forEach((column) => {
       if (state.mode === "create" && column.autoSequence) return;
-
-      if (useStarCultureNameGrid && STAR_CULTURE_NAME_FIELD_SET.has(column.name)) {
-        if (!nameGridInserted) {
-          els.editorFields.appendChild(createStarCultureNameGrid(table, row));
-          nameGridInserted = true;
-        }
-        return;
-      }
-
       els.editorFields.appendChild(createField(column, row[column.name]));
     });
     renderRelatedEditor(table);
