@@ -1,9 +1,8 @@
 .DS_Store
 .gitignore
 .env
-.venv/
+.venv/*
 .vscode/*
-package/psycopg2*
+dist/
+lambda/
 ddl.txt
-lambda_deploy.zip
-rds_control_deploy.zip
