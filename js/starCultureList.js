@@ -138,20 +138,6 @@
     return AYNU_VARIANT_MAP[simplified] || "";
   }
 
-  function hasEstimatedRegionMemo(value) {
-    return String(value ?? "").normalize("NFKC").includes("推定地域");
-  }
-
-  function getAreaNameValue(value) {
-    if (!value || typeof value !== "object") return "";
-    return value.area_name ?? value.areaName ?? value.name ?? value.area?.name ?? value.area?.area_name ?? "";
-  }
-
-  function getAreaMemoValue(value) {
-    if (!value || typeof value !== "object") return "";
-    return value.memo ?? value.area_memo ?? value.areaMemo ?? value.area?.memo ?? value.area?.area_memo ?? value.area?.areaMemo ?? "";
-  }
-
   function getStandardAynuCodes(item) {
     const seen = new Set();
     const codes = [];
@@ -190,16 +176,6 @@
     return hasRegion(item, region) ? "○" : "";
   }
 
-  function hasEstimatedRegion(item, region) {
-    return (
-      hasEstimatedRegionFrom(item?.star_area_link, region) ||
-      hasEstimatedRegionFrom(item?.star_area_links, region) ||
-      hasEstimatedRegionFrom(item?.area_links, region) ||
-      hasEstimatedRegionFrom(item?.area_names, region) ||
-      hasEstimatedRegionFrom(item?.areaNames, region)
-    );
-  }
-
   function formatOtherRegions(item) {
     const values = getOtherAynuValues(item);
     return values.length ? values.join(",") : "";
@@ -226,29 +202,15 @@
     }
 
     if (typeof value === "object") {
-      out.push(...splitAreaName(getAreaNameValue(value)));
+      const text = value.area_name ?? value.areaName ?? value.name ?? value.area?.name ?? value.area?.area_name;
+      out.push(...splitAreaName(text));
     }
-  }
-
-  function hasEstimatedRegionFrom(value, region) {
-    if (!value) return false;
-
-    if (Array.isArray(value)) {
-      return value.some((item) => hasEstimatedRegionFrom(item, region));
-    }
-
-    if (typeof value !== "object" || !hasEstimatedRegionMemo(getAreaMemoValue(value))) {
-      return false;
-    }
-
-    return splitAreaName(getAreaNameValue(value)).some((name) => normalizeStandardAynuCode(name) === region);
   }
 
   function getAreaNames(item) {
     const names = [];
     collectAreaNamesFrom(item?.star_area_link, names);
     collectAreaNamesFrom(item?.star_area_links, names);
-    collectAreaNamesFrom(item?.area_links, names);
     collectAreaNamesFrom(item?.area_names, names);
     collectAreaNamesFrom(item?.areaNames, names);
 
@@ -376,11 +338,7 @@
   }
 
   function createRegionMarkCell(item, region) {
-    const td = createCell(formatRegionMark(item, region), "star-culture-region-mark-cell");
-    if (td.textContent && hasEstimatedRegion(item, region)) {
-      td.classList.add("is-estimated-region");
-    }
-    return td;
+    return createCell(formatRegionMark(item, region), "star-culture-region-mark-cell");
   }
 
   function createChartMarkCell(item) {

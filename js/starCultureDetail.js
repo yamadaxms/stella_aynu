@@ -75,14 +75,6 @@
     }
   }
 
-  function hasEstimatedRegionMemo(value) {
-    return String(value ?? "").normalize("NFKC").includes("推定地域");
-  }
-
-  function formatAreaMemo(value) {
-    return hasEstimatedRegionMemo(value) ? "推定地域" : formatText(value);
-  }
-
   function setHidden(el, hidden) {
     if (el) el.hidden = hidden;
   }
@@ -120,7 +112,7 @@
   function createTableCell(row, column) {
     const td = document.createElement("td");
     const value = getValue(row, column.keys);
-    const text = column.format ? column.format(value, row) : formatText(value);
+    const text = formatText(value);
 
     if (column.type === "url" && String(value ?? "").trim()) {
       const safeUrl = getSafeExternalUrl(value);
@@ -225,7 +217,7 @@
       fields: ["star_area_link", "star_area_links", "area_links", "area_names"],
       columns: [
         { label: "地域名称", keys: ["area_name", "areaName", "name"] },
-        { label: "メモ", keys: ["memo", "area_memo", "areaMemo"], format: formatAreaMemo },
+        { label: "メモ", keys: ["memo", "area_memo", "areaMemo"] },
       ],
     },
     {

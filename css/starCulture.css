@@ -385,10 +385,6 @@
   text-align: center;
 }
 
-.star-culture-region-mark-cell.is-estimated-region {
-  color: #ff9800;
-}
-
 .star-culture-chart-mark-cell {
   min-width: 5rem;
   color: #ffeb3b;
