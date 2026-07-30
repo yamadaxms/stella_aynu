@@ -172,6 +172,35 @@
     return getStandardAynuCodes(item).includes(region);
   }
 
+  function collectEstimatedAreaRegionsFrom(value, out) {
+    if (!value) return;
+
+    if (Array.isArray(value)) {
+      for (const item of value) collectEstimatedAreaRegionsFrom(item, out);
+      return;
+    }
+
+    if (typeof value !== "object") return;
+
+    const linkMemo = value.link_memo ?? value.linkMemo;
+    if (normalizeText(linkMemo) !== "推定地域") return;
+
+    const text = value.area_name ?? value.areaName ?? value.name ?? value.area?.name ?? value.area?.area_name;
+    for (const areaName of splitAreaName(text)) {
+      const code = normalizeStandardAynuCode(areaName);
+      if (code) out.add(code);
+    }
+  }
+
+  function hasEstimatedRegion(item, region) {
+    const regions = new Set();
+    collectEstimatedAreaRegionsFrom(item?.star_area_link, regions);
+    collectEstimatedAreaRegionsFrom(item?.star_area_links, regions);
+    collectEstimatedAreaRegionsFrom(item?.area_links, regions);
+    collectEstimatedAreaRegionsFrom(item?.areaLinks, regions);
+    return regions.has(region);
+  }
+
   function formatRegionMark(item, region) {
     return hasRegion(item, region) ? "○" : "";
   }
@@ -338,7 +367,10 @@
   }
 
   function createRegionMarkCell(item, region) {
-    return createCell(formatRegionMark(item, region), "star-culture-region-mark-cell");
+    const text = formatRegionMark(item, region);
+    const classNames = ["star-culture-region-mark-cell"];
+    if (text && hasEstimatedRegion(item, region)) classNames.push("star-culture-region-mark-cell-estimated");
+    return createCell(text, classNames.join(" "));
   }
 
   function createChartMarkCell(item) {
