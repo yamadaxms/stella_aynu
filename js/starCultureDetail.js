@@ -8,7 +8,13 @@
   }
 
   function formatText(value) {
+    if (Array.isArray(value)) {
+      const texts = value.map((item) => formatText(item)).filter((text) => text !== "-");
+      return texts.length ? texts.join("、") : "-";
+    }
+
     const text = String(value ?? "").trim();
+    if (text.toLowerCase() === "[null]") return "-";
     return text || "-";
   }
 
@@ -114,7 +120,7 @@
     const value = getValue(row, column.keys);
     const text = formatText(value);
 
-    if (column.type === "url" && String(value ?? "").trim()) {
+    if (column.type === "url" && text !== "-") {
       const safeUrl = getSafeExternalUrl(value);
       if (!safeUrl) {
         td.textContent = "無効なURL";
@@ -184,6 +190,7 @@
         { label: "天体名称", keys: ["astro_name", "astroName", "name"] },
         { label: "所属星座", keys: ["constellation"] },
         { label: "メモ", keys: ["memo", "astro_memo", "astroMemo"] },
+        { label: "リンクメモ", keys: ["link_memo", "linkMemo"] },
       ],
     },
     {
@@ -199,6 +206,7 @@
         { label: "採集地域", keys: ["publication_area", "publicationArea"] },
         { label: "URL", keys: ["url"], type: "url" },
         { label: "メモ", keys: ["memo", "source_memo", "sourceMemo"] },
+        { label: "リンクメモ", keys: ["link_memo", "linkMemo"] },
       ],
     },
     {
@@ -210,6 +218,7 @@
         { label: "伝承地域", keys: ["tradition_area", "traditionArea"] },
         { label: "出典名", keys: ["source_name", "sourceName"] },
         { label: "メモ", keys: ["memo", "tradition_memo", "traditionMemo"] },
+        { label: "リンクメモ", keys: ["link_memo", "linkMemo"] },
       ],
     },
     {
@@ -218,6 +227,7 @@
       columns: [
         { label: "地域名称", keys: ["area_name", "areaName", "name"] },
         { label: "メモ", keys: ["memo", "area_memo", "areaMemo"] },
+        { label: "リンクメモ", keys: ["link_memo", "linkMemo"] },
       ],
     },
     {
@@ -228,6 +238,7 @@
         { label: "単語（英字）", keys: ["word_en", "wordEn"] },
         { label: "意味", keys: ["word_meaning", "wordMeaning"] },
         { label: "メモ", keys: ["memo", "word_memo", "wordMemo"] },
+        { label: "リンクメモ", keys: ["link_memo", "linkMemo"] },
         { label: "出典名", keys: ["source_name", "sourceName"] },
       ],
     },
