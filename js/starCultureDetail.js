@@ -1,10 +1,32 @@
 (() => {
   const ERROR_MESSAGE = "データの読み込みに失敗しました";
 
-  const els = {};
-
   function getElement(id) {
     return document.getElementById(id);
+  }
+
+  function queryById(root, id) {
+    if (!root) return null;
+    if (root.getElementById) return root.getElementById(id);
+    return root.querySelector(`#${id}`);
+  }
+
+  function collectElements(root = document) {
+    return {
+      loading: queryById(root, "star-culture-loading"),
+      status: queryById(root, "star-culture-status"),
+      detail: queryById(root, "star-culture-detail"),
+      basic: queryById(root, "star-culture-basic"),
+      related: {
+        astro: queryById(root, "star-culture-astro"),
+        source: queryById(root, "star-culture-source"),
+        tradition: queryById(root, "star-culture-tradition"),
+        area: queryById(root, "star-culture-area"),
+        word: queryById(root, "star-culture-word"),
+      },
+      tabs: Array.from(root.querySelectorAll?.(".star-culture-tab") || document.querySelectorAll(".star-culture-tab")),
+      tabPanels: Array.from(root.querySelectorAll?.(".star-culture-tab-panel") || document.querySelectorAll(".star-culture-tab-panel")),
+    };
   }
 
   function formatText(value) {
@@ -85,14 +107,14 @@
     if (el) el.hidden = hidden;
   }
 
-  function setLoading(isLoading) {
-    setHidden(els.loading, !isLoading);
+  function setLoading(targetEls, isLoading) {
+    setHidden(targetEls?.loading, !isLoading);
   }
 
-  function showStatus(message) {
-    if (!els.status) return;
-    els.status.textContent = message;
-    els.status.hidden = !message;
+  function showStatus(targetEls, message) {
+    if (!targetEls?.status) return;
+    targetEls.status.textContent = message;
+    targetEls.status.hidden = !message;
   }
 
   function appendBasicCell(tr, label, value) {
@@ -107,12 +129,12 @@
     tr.appendChild(td);
   }
 
-  function appendBasicPairRow(left, right) {
+  function appendBasicPairRow(targetEls, left, right) {
     const tr = document.createElement("tr");
 
     appendBasicCell(tr, left.label, left.value);
     appendBasicCell(tr, right.label, right.value);
-    els.basic.appendChild(tr);
+    targetEls.basic.appendChild(tr);
   }
 
   function createTableCell(row, column) {
@@ -244,82 +266,107 @@
     },
   ];
 
-  function renderBasic(item) {
-    els.basic.textContent = "";
+  function renderBasic(targetEls, item) {
+    targetEls.basic.textContent = "";
     appendBasicPairRow(
+      targetEls,
       { label: "名称", value: getField(item, "name_ja") || getField(item, "name") },
       { label: "オリジナル名称", value: getField(item, "original_name_ja") },
     );
     appendBasicPairRow(
+      targetEls,
       { label: "名称（英字）", value: getField(item, "name_en") },
       { label: "オリジナル名称（英字）", value: getField(item, "original_name_en") },
     );
     appendBasicPairRow(
+      targetEls,
       { label: "意味", value: getField(item, "meaning") || getField(item, "description") },
       { label: "オリジナル意味", value: getField(item, "original_meaning") },
     );
   }
 
-  function renderRelated(item) {
+  function renderRelated(targetEls, item) {
     for (const config of RELATED_TABLES) {
       const rows = getArrayField(item, ...config.fields);
-      renderRelatedTable(els.related?.[config.key], rows, config.columns);
+      renderRelatedTable(targetEls.related?.[config.key], rows, config.columns);
     }
   }
 
-  function renderDetail(item) {
-    renderBasic(item);
-    renderRelated(item);
-    setHidden(els.detail, false);
+  function renderDetail(targetEls, item) {
+    if (!targetEls?.basic || !targetEls?.detail) return false;
+    renderBasic(targetEls, item);
+    renderRelated(targetEls, item);
+    setHidden(targetEls.detail, false);
+    return true;
   }
 
-  function activateTab(tab) {
+  function activateTab(targetEls, tab) {
     if (!tab) return;
     const panelId = tab.getAttribute("aria-controls");
 
-    for (const current of els.tabs || []) {
+    for (const current of targetEls.tabs || []) {
       const active = current === tab;
       current.setAttribute("aria-selected", active ? "true" : "false");
       current.tabIndex = active ? 0 : -1;
     }
 
-    for (const panel of els.tabPanels || []) {
+    for (const panel of targetEls.tabPanels || []) {
       panel.hidden = panel.id !== panelId;
     }
   }
 
-  function moveTabFocus(direction) {
-    const tabs = els.tabs || [];
+  function moveTabFocus(targetEls, direction) {
+    const tabs = targetEls.tabs || [];
     if (!tabs.length) return;
 
     const currentIndex = Math.max(0, tabs.indexOf(document.activeElement));
     const nextIndex = (currentIndex + direction + tabs.length) % tabs.length;
-    activateTab(tabs[nextIndex]);
+    activateTab(targetEls, tabs[nextIndex]);
     tabs[nextIndex].focus();
   }
 
-  function bindTabs() {
-    for (const tab of els.tabs || []) {
-      tab.addEventListener("click", () => activateTab(tab));
+  function bindTabs(targetEls) {
+    if (!targetEls) return;
+
+    for (const tab of targetEls.tabs || []) {
+      if (tab.dataset.starCultureTabBound === "1") continue;
+      tab.dataset.starCultureTabBound = "1";
+
+      tab.addEventListener("click", () => activateTab(targetEls, tab));
       tab.addEventListener("keydown", (event) => {
         if (event.key === "ArrowRight") {
           event.preventDefault();
-          moveTabFocus(1);
+          moveTabFocus(targetEls, 1);
         } else if (event.key === "ArrowLeft") {
           event.preventDefault();
-          moveTabFocus(-1);
+          moveTabFocus(targetEls, -1);
         } else if (event.key === "Home") {
           event.preventDefault();
-          activateTab(els.tabs[0]);
-          els.tabs[0]?.focus();
+          activateTab(targetEls, targetEls.tabs[0]);
+          targetEls.tabs[0]?.focus();
         } else if (event.key === "End") {
           event.preventDefault();
-          const last = els.tabs[els.tabs.length - 1];
-          activateTab(last);
+          const last = targetEls.tabs[targetEls.tabs.length - 1];
+          activateTab(targetEls, last);
           last?.focus();
         }
       });
     }
+  }
+
+  function renderDetailInto(root, item) {
+    const targetEls = collectElements(root || document);
+    bindTabs(targetEls);
+    activateTab(targetEls, targetEls.tabs?.[0]);
+    return renderDetail(targetEls, item);
+  }
+
+  function findPublishedByKey(constellations, key) {
+    const targetKey = String(key ?? "").trim();
+    if (!targetKey || !Array.isArray(constellations)) return null;
+
+    const hasPublishFlag = constellations.some(hasPublishValue);
+    return constellations.find((entry) => String(getCultureKey(entry)) === targetKey && isPublished(entry, hasPublishFlag)) || null;
   }
 
   function getRequestedKey() {
@@ -327,15 +374,15 @@
     return String(params.get("key") || "").trim();
   }
 
-  async function loadDetail() {
+  async function loadDetail(targetEls) {
     const key = getRequestedKey();
-    setLoading(true);
-    showStatus("");
-    setHidden(els.detail, true);
+    setLoading(targetEls, true);
+    showStatus(targetEls, "");
+    setHidden(targetEls.detail, true);
 
     if (!key) {
-      showStatus("星文化キーが指定されていません。");
-      setLoading(false);
+      showStatus(targetEls, "星文化キーが指定されていません。");
+      setLoading(targetEls, false);
       return;
     }
 
@@ -346,41 +393,39 @@
 
       const data = await loadAllAynuData();
       const constellations = Array.isArray(data?.constellations) ? data.constellations : [];
-      const hasPublishFlag = constellations.some(hasPublishValue);
-      const item = constellations.find((entry) => String(getCultureKey(entry)) === key && isPublished(entry, hasPublishFlag));
+      const item = findPublishedByKey(constellations, key);
 
       if (!item) {
-        showStatus("該当する星文化情報が見つかりませんでした。");
+        showStatus(targetEls, "該当する星文化情報が見つかりませんでした。");
         return;
       }
 
-      renderDetail(item);
+      renderDetail(targetEls, item);
     } catch (err) {
       console.error(err);
-      showStatus(ERROR_MESSAGE);
+      showStatus(targetEls, ERROR_MESSAGE);
     } finally {
-      setLoading(false);
+      setLoading(targetEls, false);
     }
   }
 
   function init() {
-    els.loading = getElement("star-culture-loading");
-    els.status = getElement("star-culture-status");
-    els.detail = getElement("star-culture-detail");
-    els.basic = getElement("star-culture-basic");
-    els.related = {
-      astro: getElement("star-culture-astro"),
-      source: getElement("star-culture-source"),
-      tradition: getElement("star-culture-tradition"),
-      area: getElement("star-culture-area"),
-      word: getElement("star-culture-word"),
-    };
-    els.tabs = Array.from(document.querySelectorAll(".star-culture-tab"));
-    els.tabPanels = Array.from(document.querySelectorAll(".star-culture-tab-panel"));
-
-    bindTabs();
-    loadDetail();
+    const targetEls = collectElements(document);
+    bindTabs(targetEls);
+    loadDetail(targetEls);
   }
 
-  document.addEventListener("DOMContentLoaded", init);
+  window.StarCultureDetail = {
+    render: renderDetailInto,
+    findPublishedByKey,
+    getCultureKey,
+    hasPublishValue,
+    isPublished,
+  };
+
+  document.addEventListener("DOMContentLoaded", () => {
+    if (document.body?.dataset.starCultureDetailMode === "manual") return;
+    if (!getElement("star-culture-detail")) return;
+    init();
+  });
 })();

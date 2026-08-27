@@ -66,6 +66,7 @@ const AppState = {
   DEFAULT_VIEW_ROTATE: [0, 0, 0],
   VIEW_RESET_TOKEN: 0,
   CELESTIAL_RESIZE_TIMER: null,
+  STAR_CULTURE_MODAL_PREVIOUS_FOCUS: null,
 };
 
 // ============================================================
@@ -207,6 +208,7 @@ window.addEventListener("DOMContentLoaded", () => {
   // DOM要素に依存するUIイベントを登録する。
   // initApp はデータ取得も行うため別リスナーに分け、操作UIのイベント束縛自体は早めに済ませる。
   setupAynuListInteraction();
+  setupStarCultureDetailModal();
 
   // 投影法プルダウンのイベント登録
   const projSelect = document.getElementById("projection-select");
@@ -753,6 +755,170 @@ function getAynuFeatureId(feature) {
   return id == null ? "" : String(id);
 }
 
+function getStarCultureDataKey(item) {
+  const key =
+    item?.star_culture_id ??
+    item?.key ??
+    item?.star_culture?.star_culture_id ??
+    item?.star_culture?.key ??
+    item?.starCulture?.star_culture_id ??
+    item?.starCulture?.key ??
+    item?.star_culture_key ??
+    "";
+  return String(key ?? "").trim();
+}
+
+function getStarCultureDisplayName(item) {
+  return String(item?.name_ja ?? item?.name ?? item?.star_culture?.name_ja ?? item?.star_culture?.name ?? item?.starCulture?.name_ja ?? item?.starCulture?.name ?? "").trim();
+}
+
+function getStarCulturePublishValue(item) {
+  return item?.is_published ?? item?.star_culture?.is_published ?? item?.starCulture?.is_published;
+}
+
+function hasStarCulturePublishValue(item) {
+  return getStarCulturePublishValue(item) !== undefined && getStarCulturePublishValue(item) !== null;
+}
+
+function isStarCulturePublished(item, hasPublishFlag) {
+  if (!hasPublishFlag && !hasStarCulturePublishValue(item)) return true;
+
+  const value = getStarCulturePublishValue(item);
+  if (value === true || value === 1) return true;
+  if (typeof value === "string") {
+    return ["true", "t", "1"].includes(value.trim().toLowerCase());
+  }
+  return false;
+}
+
+function findStarCultureDetailItem(key) {
+  const constellations = Array.isArray(AppState.AYNU_DATA?.constellations) ? AppState.AYNU_DATA.constellations : [];
+  if (typeof window.StarCultureDetail?.findPublishedByKey === "function") {
+    return window.StarCultureDetail.findPublishedByKey(constellations, key);
+  }
+
+  const targetKey = String(key ?? "").trim();
+  if (!targetKey) return null;
+  const hasPublishFlag = constellations.some(hasStarCulturePublishValue);
+  return constellations.find((entry) => getStarCultureDataKey(entry) === targetKey && isStarCulturePublished(entry, hasPublishFlag)) || null;
+}
+
+function getAynuFeatureCultureEntries(feature) {
+  const entries = feature?.properties?.cultureEntries;
+  if (!Array.isArray(entries)) return [];
+
+  const seen = new Set();
+  return entries
+    .map((entry) => ({
+      key: String(entry?.key ?? "").trim(),
+      name: String(entry?.name ?? "").trim(),
+    }))
+    .filter((entry) => {
+      if (!entry.key || seen.has(entry.key)) return false;
+      seen.add(entry.key);
+      return true;
+    });
+}
+
+function setStarCultureModalStatus(message) {
+  const status = document.getElementById("star-culture-status");
+  const detail = document.getElementById("star-culture-detail");
+  if (status) {
+    status.textContent = message;
+    status.hidden = !message;
+  }
+  if (detail) detail.hidden = !!message;
+}
+
+function getStarCultureModalFocusableElements(modal) {
+  if (!modal) return [];
+  const selector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  return Array.from(modal.querySelectorAll(selector)).filter((el) => !el.hidden && el.offsetParent !== null);
+}
+
+function trapStarCultureModalFocus(event) {
+  if (event.key !== "Tab") return;
+
+  const modal = document.getElementById("star-culture-detail-modal");
+  if (!modal || modal.hidden) return;
+
+  const focusable = getStarCultureModalFocusableElements(modal);
+  if (!focusable.length) return;
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+function setupStarCultureDetailModal() {
+  const modal = document.getElementById("star-culture-detail-modal");
+  if (!modal || modal.dataset.bound === "1") return;
+  modal.dataset.bound = "1";
+
+  modal.addEventListener("click", (event) => {
+    if (event.target?.closest?.("[data-star-culture-modal-close]")) {
+      closeStarCultureDetailModal();
+    }
+  });
+  modal.addEventListener("keydown", trapStarCultureModalFocus);
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !modal.hidden) closeStarCultureDetailModal();
+  });
+}
+
+function openStarCultureDetailModal(key, trigger = null) {
+  const modal = document.getElementById("star-culture-detail-modal");
+  if (!modal) return;
+
+  AppState.STAR_CULTURE_MODAL_PREVIOUS_FOCUS = trigger || document.activeElement;
+  modal.hidden = false;
+  document.body.classList.add("star-culture-modal-open");
+  setStarCultureModalStatus("");
+  const detail = document.getElementById("star-culture-detail");
+  if (detail) detail.hidden = true;
+
+  const title = document.getElementById("star-culture-modal-title");
+  if (title) title.textContent = "星文化詳細";
+
+  const item = findStarCultureDetailItem(key);
+  if (!item) {
+    setStarCultureModalStatus("該当する星文化情報が見つかりませんでした。");
+    modal.querySelector("[data-star-culture-modal-close]")?.focus();
+    return;
+  }
+
+  const rendered = typeof window.StarCultureDetail?.render === "function" && window.StarCultureDetail.render(modal, item);
+  if (!rendered) {
+    setStarCultureModalStatus("詳細表示の初期化に失敗しました。");
+    modal.querySelector("[data-star-culture-modal-close]")?.focus();
+    return;
+  }
+
+  const name = getStarCultureDisplayName(item);
+  if (title) title.textContent = name ? `星文化詳細：${name}` : "星文化詳細";
+  modal.querySelector("[data-star-culture-modal-close]")?.focus();
+}
+
+function closeStarCultureDetailModal() {
+  const modal = document.getElementById("star-culture-detail-modal");
+  if (!modal || modal.hidden) return;
+
+  modal.hidden = true;
+  document.body.classList.remove("star-culture-modal-open");
+  setStarCultureModalStatus("");
+
+  const previousFocus = AppState.STAR_CULTURE_MODAL_PREVIOUS_FOCUS;
+  AppState.STAR_CULTURE_MODAL_PREVIOUS_FOCUS = null;
+  if (previousFocus?.focus && document.contains(previousFocus)) previousFocus.focus();
+}
+
 let AYNU_LIST_VIEWPORT_SYNC_RAF = 0;
 
 function scheduleAynuListViewportSync() {
@@ -822,6 +988,12 @@ function setupAynuListInteraction() {
   list.dataset.aynuClickBound = "1";
 
   list.addEventListener("click", (e) => {
+    const detailBtn = e.target?.closest?.("button[data-star-culture-key]");
+    if (detailBtn && list.contains(detailBtn)) {
+      openStarCultureDetailModal(detailBtn.dataset.starCultureKey, detailBtn);
+      return;
+    }
+
     const btn = e.target?.closest?.("button[data-aynu-id]");
     if (!btn || !list.contains(btn)) return;
     const id = String(btn.dataset.aynuId || "");
@@ -832,6 +1004,16 @@ function setupAynuListInteraction() {
     updateAynuList();
     if (typeof Celestial?.redraw === "function") Celestial.redraw();
   });
+}
+
+function createAynuDetailButton(entry, { includeName = false } = {}) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "aynu-detail-btn";
+  btn.dataset.starCultureKey = entry.key;
+  btn.textContent = includeName && entry.name ? `詳細：${entry.name}` : "詳細";
+  btn.setAttribute("aria-label", `${entry.name || "星文化"}の詳細を表示`);
+  return btn;
 }
 
 // ============================================================
@@ -862,10 +1044,14 @@ function updateAynuList() {
     const id = getAynuFeatureId(f);
     const name = f.properties?.n || "";
     const desc = f.properties?.desc || "";
+    const cultureEntries = getAynuFeatureCultureEntries(f);
     const isSelected = id && id === String(AppState.SELECTED_AYNU_FEATURE_ID || "");
 
     const li = document.createElement("li");
     if (isSelected) li.classList.add("is-selected");
+
+    const header = document.createElement("div");
+    header.className = "aynu-list-item-header";
 
     const btn = document.createElement("button");
     btn.type = "button";
@@ -873,13 +1059,26 @@ function updateAynuList() {
     btn.dataset.aynuId = id;
     btn.textContent = name;
     btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
+    header.appendChild(btn);
+
+    if (cultureEntries.length === 1) {
+      header.appendChild(createAynuDetailButton(cultureEntries[0]));
+    }
 
     const descDiv = document.createElement("div");
     descDiv.className = "desc";
     descDiv.textContent = desc;
 
-    li.appendChild(btn);
+    li.appendChild(header);
     li.appendChild(descDiv);
+    if (cultureEntries.length > 1) {
+      const actions = document.createElement("div");
+      actions.className = "aynu-list-actions";
+      for (const entry of cultureEntries) {
+        actions.appendChild(createAynuDetailButton(entry, { includeName: true }));
+      }
+      li.appendChild(actions);
+    }
     list.appendChild(li);
   }
 
@@ -1082,6 +1281,7 @@ function buildAynuGeoJSON(constellations, stars, areaKeys) {
     const constellationKey = String(c?.constellation_key ?? "").trim();
     const fallbackKey = String(c?.key || name || `const-${features.length}`).trim();
     const featureId = constellationKey ? `constellation:${constellationKey}` : `culture:${fallbackKey}`;
+    const cultureKey = getStarCultureDataKey(c);
     const existingGroup = featureGroups.get(featureId);
     if (existingGroup) {
       // 同じ星座線キーに複数の星文化名がある場合、星図上では1ラベルにまとめる。
@@ -1092,6 +1292,10 @@ function buildAynuGeoJSON(constellations, stars, areaKeys) {
       if (desc && !existingGroup.descriptions.includes(desc)) {
         existingGroup.descriptions.push(desc);
         existingGroup.feature.properties.desc = existingGroup.descriptions.join(AYNU_LABEL_JOINER);
+      }
+      if (cultureKey && !existingGroup.cultureKeys.includes(cultureKey)) {
+        existingGroup.cultureKeys.push(cultureKey);
+        existingGroup.feature.properties.cultureEntries.push({ key: cultureKey, name });
       }
       continue;
     }
@@ -1105,6 +1309,7 @@ function buildAynuGeoJSON(constellations, stars, areaKeys) {
         loc: [labelLon, labelLat],
         desc,
         starCount: uniqueStarCount,
+        cultureEntries: cultureKey ? [{ key: cultureKey, name }] : [],
       },
       geometry: { type: "MultiLineString", coordinates: lineSegments },
     };
@@ -1113,6 +1318,7 @@ function buildAynuGeoJSON(constellations, stars, areaKeys) {
       feature,
       names: [name],
       descriptions: desc ? [desc] : [],
+      cultureKeys: cultureKey ? [cultureKey] : [],
     });
     features.push(feature);
   }

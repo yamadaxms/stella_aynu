@@ -448,6 +448,89 @@
   color: #d1d5db;
 }
 
+body.star-culture-modal-open {
+  overflow: hidden;
+}
+
+.star-culture-modal[hidden] {
+  display: none;
+}
+
+.star-culture-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.star-culture-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.78);
+}
+
+.star-culture-modal-dialog {
+  position: relative;
+  width: min(1120px, calc(100vw - 2rem));
+  max-height: min(88vh, 960px);
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: #020617;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+}
+
+.star-culture-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.star-culture-modal-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.star-culture-modal-close {
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid #4b5563;
+  border-radius: 4px;
+  background: #0b152b;
+  color: #e5e7eb;
+  font: inherit;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.star-culture-modal-close:hover {
+  border-color: #66ccff;
+  color: #8ae2ff;
+}
+
+.star-culture-modal-close:focus-visible {
+  outline: 2px solid #ffeb3b;
+  outline-offset: 2px;
+}
+
+.star-culture-modal .star-culture-panel {
+  margin-bottom: 0.85rem;
+}
+
+.star-culture-modal .star-culture-panel:last-child {
+  margin-bottom: 0;
+}
+
 @media (max-width: 768px) {
   .star-culture-page {
     padding: 0.9rem;
@@ -476,5 +559,20 @@
 
   .star-culture-related-table {
     min-width: 900px;
+  }
+
+  .star-culture-modal {
+    padding: 0.6rem;
+  }
+
+  .star-culture-modal-dialog {
+    width: calc(100vw - 1.2rem);
+    max-height: calc(100vh - 1.2rem);
+    max-height: calc(100dvh - 1.2rem);
+    padding: 0.75rem;
+  }
+
+  .star-culture-modal-header {
+    align-items: flex-start;
   }
 }

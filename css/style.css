@@ -299,6 +299,12 @@ select {
   border-bottom: 1px dashed #374151; /* 点線の区切り線 */
 }
 
+.aynu-list-item-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
 /* アイヌ民族星文化リストの名称（クリック可能）
    button 要素としてアクセシブルにしつつ、見た目はテキストリンクに近づける。
    クリックで星図上の同一IDを強調し、再クリックで選択解除する。 */
@@ -314,8 +320,11 @@ select {
   text-align: left;
   cursor: pointer;
   display: block;
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
   border-radius: 6px;
+  overflow-wrap: anywhere;
 }
 
 .aynu-name-btn:hover {
@@ -331,6 +340,40 @@ select {
 
 .aynu-list li.is-selected .aynu-name-btn {
   color: #ffeb3b;
+}
+
+.aynu-list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+}
+
+.aynu-detail-btn {
+  flex: 0 0 auto;
+  min-height: 1.65rem;
+  max-width: 100%;
+  padding: 0.18rem 0.48rem;
+  border: 1px solid #4b5563;
+  border-radius: 4px;
+  background: #0b152b;
+  color: #8ae2ff;
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.aynu-detail-btn:hover {
+  border-color: #66ccff;
+  background: #10213d;
+}
+
+.aynu-detail-btn:focus-visible {
+  outline: 2px solid #ffeb3b;
+  outline-offset: 2px;
 }
 
 /* アイヌ民族星文化リストのコード部分（将来用／表示する場合に使用） */

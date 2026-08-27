@@ -11,8 +11,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/d3-celestial@0.7.35/celestial.css" />
     <!-- サイト固有の配色、2カラム配置、一覧、エリアマップ、補足ページのスタイル -->
     <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/starCulture.css?v=v065" />
   </head>
-  <body>
+  <body data-star-culture-detail-mode="manual">
     <!-- js/includes.js が共通ヘッダーHTMLへ差し替えるプレースホルダー -->
     <div id="site-header-include"></div>
 
@@ -99,6 +100,61 @@
       </section>
     </main>
 
+    <div id="star-culture-detail-modal" class="star-culture-modal" hidden>
+      <div class="star-culture-modal-backdrop" data-star-culture-modal-close></div>
+      <section class="star-culture-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="star-culture-modal-title">
+        <header class="star-culture-modal-header">
+          <h2 id="star-culture-modal-title">星文化詳細</h2>
+          <button class="star-culture-modal-close" type="button" aria-label="閉じる" data-star-culture-modal-close>×</button>
+        </header>
+
+        <div id="star-culture-status" class="star-culture-status" role="alert" aria-live="assertive" hidden></div>
+
+        <article id="star-culture-detail" class="star-culture-detail" hidden>
+          <section class="star-culture-panel" aria-labelledby="star-culture-basic-heading">
+            <div class="star-culture-section-header">
+              <h3 id="star-culture-basic-heading">基本情報</h3>
+            </div>
+            <div class="star-culture-table-wrap">
+              <table class="star-culture-detail-table">
+                <tbody id="star-culture-basic"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="star-culture-panel" aria-labelledby="star-culture-related-heading">
+            <div class="star-culture-section-header">
+              <h3 id="star-culture-related-heading">関連情報</h3>
+            </div>
+
+            <div class="star-culture-tabs" role="tablist" aria-label="星文化関連情報">
+              <button id="star-culture-tab-astro" class="star-culture-tab" type="button" role="tab" aria-selected="true" aria-controls="star-culture-panel-astro">関連天体</button>
+              <button id="star-culture-tab-source" class="star-culture-tab" type="button" role="tab" aria-selected="false" aria-controls="star-culture-panel-source" tabindex="-1">出典</button>
+              <button id="star-culture-tab-tradition" class="star-culture-tab" type="button" role="tab" aria-selected="false" aria-controls="star-culture-panel-tradition" tabindex="-1">伝承</button>
+              <button id="star-culture-tab-area" class="star-culture-tab" type="button" role="tab" aria-selected="false" aria-controls="star-culture-panel-area" tabindex="-1">伝承地域</button>
+              <button id="star-culture-tab-word" class="star-culture-tab" type="button" role="tab" aria-selected="false" aria-controls="star-culture-panel-word" tabindex="-1">名称詳細</button>
+            </div>
+
+            <div id="star-culture-panel-astro" class="star-culture-tab-panel" role="tabpanel" aria-labelledby="star-culture-tab-astro">
+              <div id="star-culture-astro"></div>
+            </div>
+            <div id="star-culture-panel-source" class="star-culture-tab-panel" role="tabpanel" aria-labelledby="star-culture-tab-source" hidden>
+              <div id="star-culture-source"></div>
+            </div>
+            <div id="star-culture-panel-tradition" class="star-culture-tab-panel" role="tabpanel" aria-labelledby="star-culture-tab-tradition" hidden>
+              <div id="star-culture-tradition"></div>
+            </div>
+            <div id="star-culture-panel-area" class="star-culture-tab-panel" role="tabpanel" aria-labelledby="star-culture-tab-area" hidden>
+              <div id="star-culture-area"></div>
+            </div>
+            <div id="star-culture-panel-word" class="star-culture-tab-panel" role="tabpanel" aria-labelledby="star-culture-tab-word" hidden>
+              <div id="star-culture-word"></div>
+            </div>
+          </section>
+        </article>
+      </section>
+    </div>
+
     <!-- d3-celestial 関連ライブラリ。依存順は d3 → 地図投影拡張 → celestial 本体 -->
     <script src="https://cdn.jsdelivr.net/npm/d3-celestial@0.7.35/lib/d3.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3-celestial@0.7.35/lib/d3.geo.projection.min.js"></script>
@@ -106,10 +162,11 @@
 
     <!-- 自前の JS。dataLoader を先に読み込み、main.js から loadAllAynuData() を呼べるようにする -->
     <!-- クエリ文字列の v は、静的配信/CDN/ブラウザキャッシュ更新用の簡易バージョン -->
-    <script src="js/config.js?v=v064a"></script>
-    <script src="js/dataLoader.js?v=v064a"></script>
-    <script src="js/main.js?v=v064a"></script>
-    <script src="js/includes.js?v=v064a"></script>
-    <script src="js/contentProtection.js?v=v064a"></script>
+    <script src="js/config.js?v=v065"></script>
+    <script src="js/dataLoader.js?v=v065"></script>
+    <script src="js/starCultureDetail.js?v=v065"></script>
+    <script src="js/main.js?v=v065"></script>
+    <script src="js/includes.js?v=v065"></script>
+    <script src="js/contentProtection.js?v=v065"></script>
   </body>
 </html>
