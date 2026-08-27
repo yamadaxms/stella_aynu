@@ -390,7 +390,7 @@
 
     const link = document.createElement("a");
     link.className = "star-culture-action-link";
-    link.href = `star-culture-detail.html?key=${encodeURIComponent(key)}`;
+    link.href = `detail.html?key=${encodeURIComponent(key)}`;
     link.textContent = "詳細";
     td.appendChild(link);
     return td;
