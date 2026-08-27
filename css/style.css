@@ -571,6 +571,32 @@ a[href*="x.com/trapezium_orion"] {
   margin-bottom: 0; /* 最後の段落は余白なし */
 }
 
+.history-card .release {
+  padding: 1rem 0; /* 履歴項目ごとの読みやすい間隔 */
+  border-top: 1px solid #1f2933; /* 他の補足ページと同じ暗色テーマの区切り */
+}
+
+.history-card .release:first-of-type {
+  margin-top: 0.8rem; /* ページ見出しと最初の履歴項目の間隔 */
+}
+
+.history-card .release h3 {
+  margin: 0 0 0.45rem; /* バージョン見出しを本文に近づける */
+  font-size: 1rem;
+  color: #cbd5f5;
+}
+
+.history-card .release ul {
+  margin: 0;
+  padding-left: 1.4rem;
+  color: #e5e7eb;
+  font-size: 0.95rem;
+}
+
+.history-card .release li + li {
+  margin-top: 0.25rem;
+}
+
 .back-link {
   /* 補足ページから星図へ戻る主要導線。本文中リンクより押しやすいボタン風の見た目にする。 */
   display: inline-block; /* ボタン風にする */

@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>アイヌ民族星文化ビューア ～カムイの星図～</title>
+
+    <!-- 更新履歴をスマホ幅でも読みやすくするため、viewportを実デバイス幅に合わせる -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- 星図ページと同じ共通スタイル順にして、ヘッダーや補足ページの見た目を統一する -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/d3-celestial@0.7.35/celestial.css" />
+    <!-- content-wrapper/content-card と補足ページの配色・余白を定義するCSS -->
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <!-- js/includes.js が共通ヘッダーと現在ページのナビ強調へ差し替える -->
+    <div id="site-header-include"></div>
+
+    <!-- サイトの更新履歴を、星図とは独立した読み物として表示する -->
+    <main class="content-wrapper">
+      <article class="content-card history-card">
+        <h2>更新履歴</h2>
+
+        <section class="release">
+          <h3>Ver.0.6.5 — 2026年8月27日</h3>
+          <ul>
+            <li>星図ビューの星文化一覧から、星文化の詳細情報を表示できる機能を追加。</li>
+            <li>詳細情報を画面内のウィンドウで確認できるようにし、操作性を改善。</li>
+            <li>サイト内メニューの構成を調整。</li>
+          </ul>
+        </section>
+
+        <section class="release">
+          <h3>Ver.0.6.4 — 2026年7月30日</h3>
+          <ul>
+            <li>星文化の地域情報について、「推定地域」を区別して表示できるよう改善。</li>
+            <li>星文化データの表示を調整。</li>
+          </ul>
+        </section>
+
+        <section class="release">
+          <h3>Ver.0.6.2 — 2026年7月9日</h3>
+          <ul>
+            <li>星文化詳細画面のレイアウトを改善。</li>
+            <li>名称・意味・オリジナル名称などを見やすく整理。</li>
+            <li>関連する天体・出典・伝承などの情報表示を改善。</li>
+            <li>星文化データベースの検索機能を改善。</li>
+          </ul>
+        </section>
+
+        <section class="release">
+          <h3>Ver.0.5.7 — 2026年6月19日</h3>
+          <ul>
+            <li>星文化データベースの一覧表示・並べ替え機能を改善。</li>
+            <li>表示や操作性を調整。</li>
+          </ul>
+        </section>
+
+        <section class="release">
+          <h3>Ver.0.5.6 — 2026年6月10日</h3>
+          <ul>
+            <li>星文化と天体・出典・伝承・地域などの関連情報を拡充。</li>
+            <li>星文化データベースの詳細情報を充実。</li>
+          </ul>
+        </section>
+
+        <section class="release">
+          <h3>Ver.0.5.5 — 2026年5月28日</h3>
+          <ul>
+            <li>星文化データをWeb上で管理するための管理機能を追加。</li>
+          </ul>
+        </section>
+
+        <section class="release">
+          <h3>Ver.0.5.4 — 2026年5月21日</h3>
+          <ul>
+            <li>星文化詳細画面を拡充。</li>
+            <li>関連する天体・出典・伝承・地域などを表示できるように変更。</li>
+            <li>詳細情報を項目ごとに切り替えて閲覧できるよう改善。</li>
+          </ul>
+        </section>
+
+        <section class="release">
+          <h3>Ver.0.5.3 — 2026年5月18日</h3>
+          <ul>
+            <li><strong>「星文化データベース」ページを新設。</strong></li>
+            <li>登録されている星文化の一覧・詳細を閲覧できるように変更。</li>
+            <li>名称や地域などによる検索・絞り込み機能を追加。</li>
+          </ul>
+        </section>
+
+        <section class="release">
+          <h3>Ver.0.5.2 — 2026年5月15日</h3>
+          <ul>
+            <li>星図ビューのレイアウトを改善。</li>
+            <li>PCや小さい画面での表示を調整。</li>
+          </ul>
+        </section>
+
+        <section class="release">
+          <h3>Ver.0.4.1 — 2026年2月14日</h3>
+          <ul>
+            <li>星図を星座早見盤形式で表示する機能を追加。</li>
+            <li>地域情報や地域地図の表示を改善。</li>
+            <li>参考文献・補足情報ページを整理。</li>
+            <li>アクセシビリティを改善。</li>
+          </ul>
+        </section>
+
+        <section class="release">
+          <h3>Ver.0.4.0 — 2026年1月31日</h3>
+          <ul>
+            <li>星の表示等級を調整できる機能を追加。</li>
+            <li>星文化一覧から選択した星文化を星図上で強調表示できるように変更。</li>
+            <li>星図の表示範囲と星文化一覧を連動させる機能を追加。</li>
+            <li>地域・振興局・予報区などの情報表示を拡充。</li>
+          </ul>
+        </section>
+
+        <section class="release">
+          <h3>Ver.0.3.4 — 2026年1月28日</h3>
+          <ul>
+            <li>星図表示のリセット機能を改善。</li>
+            <li>観測地点や時刻を考慮した星図表示に対応。</li>
+            <li>現在地を利用した星図表示を改善。</li>
+          </ul>
+        </section>
+
+        <section class="release">
+          <h3>Ver.0.3.3 — 2026年1月26日</h3>
+          <ul>
+            <li>サイト共通メニューを追加。</li>
+            <li>各ページ間の移動をわかりやすく改善。</li>
+          </ul>
+        </section>
+
+        <section class="release">
+          <h3>Ver.0.3.2 — 2026年1月21日</h3>
+          <ul>
+            <li>「参考文献」ページを追加。</li>
+            <li>「アイヌ語表記について」などの補足情報を整理。</li>
+          </ul>
+        </section>
+
+        <section class="release">
+          <h3>Ver.0.3.0 — 2025年12月29日</h3>
+          <ul>
+            <li>星文化・星・市町村データの構成を整理。</li>
+            <li>星図ビューの画面構成を大幅に改善。</li>
+          </ul>
+        </section>
+
+        <section class="release">
+          <h3>Ver.0.2.1 — 2025年12月16日</h3>
+          <ul>
+            <li>「アイヌ語表記について」の補足ページを追加。</li>
+          </ul>
+        </section>
+
+        <section class="release">
+          <h3>Ver.0.1.x — 2025年12月</h3>
+          <ul>
+            <li>星図の投影法切り替え機能を追加。</li>
+            <li>88星座の表示・非表示切り替えに対応。</li>
+            <li>星図表示のリセット機能を追加。</li>
+            <li>選択した市町村に対応する星文化地域を地図で表示。</li>
+            <li>複数の星文化地域にまたがる市町村の表示に対応。</li>
+          </ul>
+        </section>
+
+        <section class="release">
+          <h3>Ver.0.0.x — 2025年11月</h3>
+          <ul>
+            <li>D3-Celestialを利用した星図ビューを構築。</li>
+            <li>市町村を選択して対応する星文化地域を表示する機能を追加。</li>
+            <li>アイヌ民族の星文化を星図上に表示。</li>
+            <li>星文化の名称・説明を一覧表示。</li>
+            <li>地域情報・地域地図の表示機能を追加。</li>
+          </ul>
+        </section>
+
+        <section class="release">
+          <h3>初期試作 — 2025年11月</h3>
+          <ul>
+            <li>アイヌ民族の星文化をWeb上の星図に表示する試作版を作成。</li>
+            <li>現在地や市町村から星文化地域を判定する機能を試作。</li>
+          </ul>
+        </section>
+        <a class="back-link" href="index.html">星図ビューへ戻る</a>
+      </article>
+    </main>
+
+    <!-- 共通ヘッダー読み込みと、更新履歴ページ上の文章に対する軽い複製抑止を適用する -->
+    <script src="js/includes.js?v=v065"></script>
+    <script src="js/contentProtection.js?v=v065"></script>
+  </body>
+</html>
