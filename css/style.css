@@ -130,6 +130,7 @@ body::after {
 .utility-nav {
   margin-top: 0.35rem; /* ヘッダー下部のナビ間隔 */
   display: flex; /* 横並びに配置 */
+  flex-wrap: wrap; /* 補足ページが増えても狭い画面では折り返す */
   gap: 0.75rem; /* リンク間の余白 */
   font-size: 0.85rem; /* 少し小さめの文字 */
 }
@@ -614,10 +615,168 @@ a[href*="x.com/trapezium_orion"] {
 }
 
 /* =========================================================
+ * Regions page / areas.html 用
+ * ========================================================= */
+
+.region-guide {
+  overflow: hidden;
+}
+
+.content-card .region-kicker {
+  margin: 0 0 0.35rem;
+  color: #8ae2ff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.region-method {
+  margin: 1.5rem 0 2rem;
+  padding: 1.15rem 1.25rem;
+  border: 1px solid #24405c;
+  border-left: 4px solid #66ccff;
+  border-radius: 10px;
+  background: #101a2d;
+}
+
+.region-method h3,
+.region-caution h3 {
+  margin: 0 0 0.65rem;
+  color: #f5f5f5;
+  font-size: 1rem;
+}
+
+.region-method a {
+  color: #8ae2ff;
+}
+
+.region-section-header {
+  margin-bottom: 1rem;
+}
+
+.region-section-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.region-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.region-card {
+  --region-color: #66ccff;
+  display: grid;
+  grid-template-columns: minmax(230px, 300px) minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid #273448;
+  border-left: 4px solid var(--region-color);
+  border-radius: 10px;
+  background: #101827;
+}
+
+.region-card-1 {
+  --region-color: #51c8eb;
+}
+
+.region-card-2 {
+  --region-color: #f0df4f;
+}
+
+.region-card-3 {
+  --region-color: #ae71df;
+}
+
+.region-card-4 {
+  --region-color: #ef7c7c;
+}
+
+.region-card-5 {
+  --region-color: #76dc83;
+}
+
+.region-map {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  border-right: 1px solid #273448;
+  background: #fff;
+}
+
+.region-map img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.region-card-copy {
+  align-self: center;
+  padding: 1.2rem 1.35rem;
+}
+
+.region-card-copy h4 {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.7rem;
+  margin: 0 0 0.8rem;
+  color: #f5f5f5;
+  font-size: 1.2rem;
+}
+
+.region-card-copy h4 span {
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--region-color);
+  border-radius: 999px;
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.content-card .region-card-copy p {
+  color: #dce4ee;
+}
+
+.region-card-copy strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--region-color);
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+}
+
+.region-caution {
+  margin-top: 2rem;
+  padding: 1.15rem 1.25rem;
+  border: 1px solid #6f5a24;
+  border-radius: 10px;
+  background: #211d12;
+}
+
+.content-card .region-caution-label {
+  display: inline-block;
+  margin: 0 0 0.45rem;
+  padding: 0.16rem 0.55rem;
+  border-radius: 999px;
+  background: #5c4919;
+  color: #ffe18a;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* =========================================================
  * Responsive / スマホ対応
  * ========================================================= */
 
 @media (max-width: 768px) {
+  .utility-nav {
+    gap: 0.35rem;
+  }
+
+  .utility-nav-admin {
+    margin-left: 0;
+  }
+
   /* スマホでは縦積みに変更 */
   .layout {
     flex-direction: column;
@@ -633,5 +792,23 @@ a[href*="x.com/trapezium_orion"] {
   /* 星図コンテナの実寸はJSで表示エリアに合わせる */
   #celestial-map {
     max-width: 100%;
+  }
+
+  .region-card {
+    grid-template-columns: 1fr;
+  }
+
+  .region-map {
+    border-right: 0;
+    border-bottom: 1px solid #273448;
+  }
+
+  .region-map img {
+    max-width: 360px;
+    margin: 0 auto;
+  }
+
+  .region-card-copy {
+    padding: 1rem;
   }
 }

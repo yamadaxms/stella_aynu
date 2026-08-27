@@ -2,7 +2,7 @@
   // ============================================================
   // 共通ヘッダー読み込み
   // ============================================================
-  // index.html / notes.html / references.html で同じヘッダーを使い回すため、
+  // index.html / areas.html / notes.html / references.html などで同じヘッダーを使い回すため、
   // プレースホルダー要素を site-header.html の内容で置き換える。
   // 静的HTMLのまま共通部品化しているため、fetch が使えない file:// 直開きでは失敗する場合がある。
   const HEADER_PLACEHOLDER_ID = "site-header-include";
