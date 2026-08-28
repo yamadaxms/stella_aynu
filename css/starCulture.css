@@ -461,7 +461,8 @@ body.star-culture-modal-open {
   inset: 0;
   z-index: 1000;
   display: grid;
-  place-items: center;
+  /* タブ内容の高さが変わっても、モーダルの上端と操作ボタンを同じ位置に保つ。 */
+  place-items: start center;
   padding: 1rem;
 }
 
