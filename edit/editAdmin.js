@@ -144,7 +144,7 @@
         { name: "detail_flg", label: "出典詳細公開", type: "boolean", required: true, default: false },
         { name: "publisher", label: "出版社", type: "text", maxLength: 32 },
         { name: "author", label: "著者/採取者", type: "text", maxLength: 32 },
-        { name: "publication_date", label: "発行/採集年月日", type: "date" },
+        { name: "publication_date", label: "発行/採集年月日", type: "text", maxLength: 32 },
         { name: "publication_area", label: "採集地域", type: "text", maxLength: 16 },
         { name: "url", label: "URL", type: "url", maxLength: 2048 },
         { name: "memo", label: "メモ", type: "textarea" },

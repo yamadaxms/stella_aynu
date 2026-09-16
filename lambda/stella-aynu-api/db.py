@@ -106,15 +106,6 @@ def to_public_url(value):
     return text
 
 
-def to_date_text(value):
-    """date / datetime などをJSON化できるISO文字列へ変換する。"""
-    if value is None:
-        return ""
-    if hasattr(value, "isoformat"):
-        return value.isoformat()
-    return to_text(value)
-
-
 def to_hip_key(value):
     """HIP番号をフロントエンドが参照する `HIP_12345` 形式へそろえる。
 
@@ -451,7 +442,7 @@ def fetch_constellations(conn):
                     "source_detail": to_text(row["source_detail"]),
                     "publisher": to_text(row["publisher"]),
                     "author": to_text(row["author"]),
-                    "publication_date": to_date_text(row["publication_date"]),
+                    "publication_date": to_text(row["publication_date"]),
                     "publication_area": to_text(row["publication_area"]),
                     "url": to_public_url(row["url"]),
                     "memo": to_text(row["memo"]),
@@ -683,7 +674,7 @@ ADMIN_TABLES = {
             {"name": "detail_flg", "label": "出典詳細公開", "type": "boolean", "required": True, "default": False},
             {"name": "publisher", "label": "出版社", "type": "text", "max_length": 32},
             {"name": "author", "label": "著者/採取者", "type": "text", "max_length": 32},
-            {"name": "publication_date", "label": "発行/採集年月日", "type": "date"},
+            {"name": "publication_date", "label": "発行/採集年月日", "type": "text", "max_length": 32},
             {"name": "publication_area", "label": "採集地域", "type": "text", "max_length": 16},
             {"name": "url", "label": "URL", "type": "url", "max_length": 2048},
             {"name": "memo", "label": "メモ", "type": "textarea"},
