@@ -488,7 +488,7 @@ a[href*="x.com/trapezium_orion"] {
   padding: 4px; /* 内側余白 */
   border-radius: 6px; /* 角丸 */
   opacity: 0.9; /* 少し透けさせる */
-  z-index: 2000; /* 星図より前面に配置（将来重なった場合の保険） */
+  z-index: 1; /* 星図より前面、詳細モーダルと背景の暗幕（z-index: 1000）より背面に配置 */
   display: none; /* 初期は非表示（JSで表示制御） */
   margin: 0 auto; /* 中央寄せ */
   overflow: hidden; /* はみ出し防止 */
