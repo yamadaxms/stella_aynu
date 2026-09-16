@@ -668,12 +668,12 @@ ADMIN_TABLES = {
             "memo",
         ],
         "columns": [
-            {"name": "source_name", "label": "出典名", "type": "text", "required": True, "max_length": 32},
+            {"name": "source_name", "label": "出典名", "type": "text", "required": True, "max_length": 128},
             {"name": "source_cd", "label": "出典区分", "type": "select", "lookup": "source_cd", "required": True, "max_length": 1},
             {"name": "source_detail", "label": "出典詳細", "type": "textarea"},
             {"name": "detail_flg", "label": "出典詳細公開", "type": "boolean", "required": True, "default": False},
             {"name": "publisher", "label": "出版社", "type": "text", "max_length": 32},
-            {"name": "author", "label": "著者/採取者", "type": "text", "max_length": 32},
+            {"name": "author", "label": "著者/採取者", "type": "text", "max_length": 128},
             {"name": "publication_date", "label": "発行/採集年月日", "type": "text", "max_length": 32},
             {"name": "publication_area", "label": "採集地域", "type": "text", "max_length": 16},
             {"name": "url", "label": "URL", "type": "url", "max_length": 2048},
@@ -1182,7 +1182,7 @@ def normalize_admin_star_culture_links(raw_links):
     seen = set()
     for row in links.get("source") or []:
         item = {
-            "source_name": normalize_link_text(row, "source_name", "出典名", required=True, max_length=32),
+            "source_name": normalize_link_text(row, "source_name", "出典名", required=True, max_length=128),
             "page_num": normalize_link_int(row, "page_num", "ページ番号"),
             "memo": normalize_link_text(row, "memo", "メモ"),
         }
@@ -1202,7 +1202,7 @@ def normalize_admin_star_culture_links(raw_links):
     for row in links.get("tradition_source") or []:
         item = {
             "tradition_title": normalize_link_text(row, "tradition_title", "伝承タイトル", required=True, max_length=64),
-            "source_name": normalize_link_text(row, "source_name", "出典名", required=True, max_length=32),
+            "source_name": normalize_link_text(row, "source_name", "出典名", required=True, max_length=128),
             "page_num": normalize_link_int(row, "page_num", "ページ番号"),
             "memo": normalize_link_text(row, "memo", "メモ"),
         }
