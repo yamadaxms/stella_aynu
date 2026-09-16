@@ -6,7 +6,7 @@
   // プレースホルダー要素を site-header.html の内容で置き換える。
   // 静的HTMLのまま共通部品化しているため、fetch が使えない file:// 直開きでは失敗する場合がある。
   const HEADER_PLACEHOLDER_ID = "site-header-include";
-  const HEADER_PARTIAL_PATH = "site-header.html?v=v066";
+  const HEADER_PARTIAL_PATH = "site-header.html?v=v066b";
 
   function inferCurrentPage() {
     // パス末尾のファイル名を現在ページとして扱う。

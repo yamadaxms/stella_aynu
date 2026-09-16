@@ -202,6 +202,7 @@
     table.appendChild(tbody);
     wrap.appendChild(table);
     container.appendChild(wrap);
+    window.StarCultureResize?.enableTable(table);
   }
 
   const RELATED_TABLES = [
