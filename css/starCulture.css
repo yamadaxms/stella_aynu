@@ -300,13 +300,10 @@
   z-index: 1;
 }
 
-/* 地域区分・星図表示は、見出しと並べ替えマークが一行に収まる幅を確保する。 */
-.star-culture-table thead th[data-sort-column^="aynu"] {
-  min-width: 6rem;
-}
-
+/* 地域区分・星図表示は、見出しと並べ替えマークが収まる最小幅に詰める。 */
+.star-culture-table thead th[data-sort-column^="aynu"],
 .star-culture-table thead th[data-sort-column="chart"] {
-  min-width: 7rem;
+  width: 1%;
 }
 
 .star-culture-related-table thead th {
