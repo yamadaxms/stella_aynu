@@ -300,6 +300,15 @@
   z-index: 1;
 }
 
+/* 地域区分・星図表示は、見出しと並べ替えマークが一行に収まる幅を確保する。 */
+.star-culture-table thead th[data-sort-column^="aynu"] {
+  min-width: 6rem;
+}
+
+.star-culture-table thead th[data-sort-column="chart"] {
+  min-width: 7rem;
+}
+
 .star-culture-related-table thead th {
   position: relative;
 }
@@ -363,7 +372,15 @@
   font: inherit;
   font-weight: inherit;
   text-align: left;
+  white-space: nowrap;
   cursor: pointer;
+}
+
+/* 並べ替え前からマークの余白を確保し、操作時の見出しの幅を安定させる。 */
+.star-culture-sort-button::after {
+  content: "";
+  flex: 0 0 0.65rem;
+  font-size: 0.65rem;
 }
 
 .star-culture-table th[aria-sort="ascending"] .star-culture-sort-button::after {
