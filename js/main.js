@@ -39,11 +39,11 @@ const CELESTIAL_PROJECTION_ASPECT = {
 // areaキー→区分名の変換テーブル
 const AREA_LABEL_MAP = {
   area0: "全域",
-  area1: "区分Ⅰ",
-  area2: "区分Ⅱ",
-  area3: "区分Ⅲ",
-  area4: "区分Ⅳ",
-  area5: "区分Ⅴ",
+  area1: "地域区分Ⅰ",
+  area2: "地域区分Ⅱ",
+  area3: "地域区分Ⅲ",
+  area4: "地域区分Ⅳ",
+  area5: "地域区分Ⅴ",
 };
 
 // エリアプレビューのデフォルト重ね合わせ（市町村未選択時用）を保持

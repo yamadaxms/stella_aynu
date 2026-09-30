@@ -21,11 +21,11 @@
     sensitivity: "base",
   });
   const AREA_LIST_PINNED_NAMES = [
-    "地域（Ⅰ）",
-    "地域（Ⅱ）",
-    "地域（Ⅲ）",
-    "地域（Ⅳ）",
-    "地域（Ⅴ）",
+    "地域区分Ⅰ",
+    "地域区分Ⅱ",
+    "地域区分Ⅲ",
+    "地域区分Ⅳ",
+    "地域区分Ⅴ",
     "地域不明",
   ];
   const AREA_LIST_PINNED_ORDER = new Map(

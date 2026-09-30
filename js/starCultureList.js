@@ -35,11 +35,11 @@
   }
 
   const AYNU_LABEL_MAP = {
-    aynu1: "区分Ⅰ",
-    aynu2: "区分Ⅱ",
-    aynu3: "区分Ⅲ",
-    aynu4: "区分Ⅳ",
-    aynu5: "区分Ⅴ",
+    aynu1: "地域区分Ⅰ",
+    aynu2: "地域区分Ⅱ",
+    aynu3: "地域区分Ⅲ",
+    aynu4: "地域区分Ⅳ",
+    aynu5: "地域区分Ⅴ",
   };
   const STANDARD_AYNU_CODES = Object.keys(AYNU_LABEL_MAP);
   const OTHER_REGION_FILTER = "other";

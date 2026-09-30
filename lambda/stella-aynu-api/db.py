@@ -123,7 +123,7 @@ def to_hip_key(value):
 def s_area_to_aynu_code(value):
     """DBの星文化地域を constellations[].aynu 用の値へ変換する。
 
-    DB側では 1-5 / 地域（Ⅰ）-（Ⅴ）などで地域を持つが、画面側の標準地域は
+    DB側では 1-5 / 地域区分Ⅰ- 地域区分Ⅴなどで地域を持つが、画面側の標準地域は
     aynu1-5 を使う。標準地域以外の値は検索画面の「その他」列へ出すため、
     捨てずに元の文字列を返す。
     """
@@ -169,7 +169,7 @@ def s_area_to_aynu_code(value):
 
 
 def is_standard_aynu_area(value):
-    """区分Ⅰ-Ⅴに相当する地域名かどうかを判定する。"""
+    """地域区分Ⅰ-Ⅴに相当する地域名かどうかを判定する。"""
     return s_area_to_aynu_code(value) in {"aynu1", "aynu2", "aynu3", "aynu4", "aynu5"}
 
 
@@ -298,11 +298,11 @@ def fetch_constellations(conn):
             sal.star_culture_id,
             CASE sal.area_name
                 WHEN '全域' THEN 0
-                WHEN '地域（Ⅰ）' THEN 1
-                WHEN '地域（Ⅱ）' THEN 2
-                WHEN '地域（Ⅲ）' THEN 3
-                WHEN '地域（Ⅳ）' THEN 4
-                WHEN '地域（Ⅴ）' THEN 5
+                WHEN '地域区分Ⅰ' THEN 1
+                WHEN '地域区分Ⅱ' THEN 2
+                WHEN '地域区分Ⅲ' THEN 3
+                WHEN '地域区分Ⅳ' THEN 4
+                WHEN '地域区分Ⅴ' THEN 5
                 ELSE 6
             END,
             sal.area_name
@@ -412,7 +412,7 @@ def fetch_constellations(conn):
     area_links_by_culture = {}
     for row in star_area_rows:
         # 検索画面の区分列・その他列で使う伝承地域名を、星文化IDごとに配列で保持する。
-        # 区分Ⅰ-Ⅴの判定も s_area_list_c ではなく star_area_link.area_name を正規化して行う。
+        # 地域区分Ⅰ-Ⅴの判定も s_area_list_c ではなく star_area_link.area_name を正規化して行う。
         area_name = to_text(row["area_name"])
         if not area_name:
             continue
