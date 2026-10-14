@@ -82,6 +82,9 @@
     },
   ];
 
+  const ADMIN_TABLE_NAMES = [
+    "star_culture", "astro_master", "word_master", "source_list", "area_list", "tradition_list",
+  ];
   const TABLES = [];
 
   const state = {
@@ -156,11 +159,14 @@
     els.newRowButton.disabled = true;
     const data = await apiRequest(buildAdminUrl(""));
     if (!Array.isArray(data?.tables) || !data.tables.length) throw new Error("編集対象テーブルの定義を取得できませんでした。");
-    const definitions = data.tables.map((table) => ({
+    const tables = ADMIN_TABLE_NAMES.map((name) => data.tables.find((table) => table.name === name));
+    if (tables.some((table) => !table)) throw new Error("編集対象テーブルの定義が不足しています。");
+    const definitions = tables.map((table) => ({
       ...table,
       primaryKeys: table.primaryKeys || [table.primaryKey],
       columns: table.columns.map((column) => ({ ...column, maxLength: column.max_length, autoSequence: column.auto_sequence })),
-      listColumns: table.listColumns || table.columns.filter((column) => !column.readonly).slice(0, 6).map((column) => column.name),
+      listColumns: (table.listColumns || table.columns.filter((column) => !column.readonly).slice(0, 6).map((column) => column.name))
+        .filter((name) => !(table.primaryKeys || [table.primaryKey]).includes(name)),
       defaultSort: table.defaultSort || table.primaryKey,
       relatedLinks: table.name === "star_culture" ? STAR_CULTURE_LINKS : undefined,
     }));
@@ -701,7 +707,7 @@
 
     await loadRows();
     if (lookupError) {
-      setStatus(`コードマスタの読み込みに失敗しました。${lookupError.message || String(lookupError)}`);
+      setStatus(`選択肢の読み込みに失敗しました。${lookupError.message || String(lookupError)}`);
     }
   }
 
@@ -763,8 +769,9 @@
     if (column?.type === "boolean") return value ? "公開" : "非公開";
     if (column?.type === "datetime") return formatDateTime(value);
     if (column?.type === "select") {
+      if (value === null || value === undefined || value === "") return "-";
       const option = findLookupOption(column, value);
-      if (option) return formatLookupOption(option);
+      return option ? formatLookupOption(option) : "名称未登録";
     }
     if (value === null || value === undefined || value === "") return "-";
     return String(value);
@@ -775,7 +782,7 @@
   }
 
   function formatLookupOption(option) {
-    return String(option.value) === String(option.label) ? String(option.label) : `${option.value}: ${option.label}`;
+    return String(option.label || "名称未登録");
   }
 
   function getLookupOptions(column) {
@@ -1032,7 +1039,7 @@
       if (currentValue && !options.some((option) => String(option.value) === currentValue)) {
         const unknownOption = document.createElement("option");
         unknownOption.value = currentValue;
-        unknownOption.textContent = `${currentValue}: マスタ未登録`;
+        unknownOption.textContent = "現在の選択（マスタ未登録）";
         unknownOption.selected = true;
         select.appendChild(unknownOption);
       }
@@ -1041,7 +1048,7 @@
       if (options.length === 0) {
         const help = document.createElement("p");
         help.className = "field-help";
-        help.textContent = "コードマスタの選択肢を取得できていません。";
+        help.textContent = "選択肢を取得できていません。";
         wrapper.appendChild(help);
       }
       return wrapper;
@@ -1108,13 +1115,21 @@
       placeholder.selected = String(currentValue) === "";
       input.appendChild(placeholder);
 
-      getLookupOptions(field).forEach((option) => {
+      const options = getLookupOptions(field);
+      options.forEach((option) => {
         const optionEl = document.createElement("option");
         optionEl.value = option.value;
         optionEl.textContent = formatLookupOption(option);
         optionEl.selected = String(option.value) === String(currentValue);
         input.appendChild(optionEl);
       });
+      if (currentValue !== "" && !options.some((option) => String(option.value) === String(currentValue))) {
+        const unknownOption = document.createElement("option");
+        unknownOption.value = currentValue;
+        unknownOption.textContent = "現在の選択（マスタ未登録）";
+        unknownOption.selected = true;
+        input.appendChild(unknownOption);
+      }
     } else {
       input = document.createElement("input");
       input.type = field.type === "integer" ? "number" : "text";
@@ -1207,7 +1222,8 @@
     const table = getTableDefinition();
     els.editorFields.textContent = "";
     table.columns.forEach((column) => {
-      if (state.mode === "create" && (column.autoSequence || column.readonly)) return;
+      if (column.hidden || column.autoSequence) return;
+      if (state.mode === "create" && column.readonly) return;
       els.editorFields.appendChild(createField(column, row[column.name]));
     });
     renderRelatedEditor(table);
@@ -1352,7 +1368,7 @@
     if (state.mode !== "edit" || state.originalPrimaryKey === null) return;
 
     const table = getTableDefinition();
-    const ok = window.confirm(`${table.label} の「${state.originalPrimaryKey}」を削除します。`);
+    const ok = window.confirm(`${table.label}の選択したデータを削除します。`);
     if (!ok) return;
 
     setStatus("");

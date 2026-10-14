@@ -9,7 +9,7 @@ import psycopg2
 from psycopg2 import sql
 from psycopg2.extras import RealDictCursor
 
-from admin_schema import ADMIN_TABLES, ADMIN_LOOKUP_TABLES
+from admin_schema import ADMIN_TABLES, ADMIN_LOOKUP_TABLES, SCHEMA_TABLES
 
 
 DB_TIME_ZONE = "Asia/Tokyo"
@@ -667,17 +667,14 @@ def get_admin_lookup_options():
     with get_connection() as conn:
         for key, definition in ADMIN_LOOKUP_TABLES.items():
             order_columns = definition.get("order_by") or [definition["value_column"]]
-            detail_column = definition.get("detail_column")
             rows = query_rows(
                 conn,
                 sql.SQL(
-                    "SELECT {value_column} AS value, {label_column} AS label{detail} "
+                    "SELECT {value_column} AS value, {label_column} AS label "
                     "FROM {table} ORDER BY {order_by}"
                 ).format(
                     value_column=sql.Identifier(definition["value_column"]),
                     label_column=sql.Identifier(definition["label_column"]),
-                    detail=(sql.SQL(", {} AS detail").format(sql.Identifier(detail_column))
-                            if detail_column else sql.SQL("")),
                     table=sql.Identifier(definition["table"]),
                     order_by=sql.SQL(", ").join(sql.Identifier(column) for column in order_columns),
                 ),
@@ -685,10 +682,24 @@ def get_admin_lookup_options():
             options[key] = [
                 {
                     "value": to_text(row["value"]),
-                    "label": " / ".join(filter(None, [to_text(row["label"]), to_text(row.get("detail"))])),
+                    "label": to_text(row["label"]),
                 }
                 for row in rows
             ]
+
+        # 星図の参照キーは内部値に保ち、選択肢には対応する星文化の名称を使う。
+        names_by_key = {}
+        for row in query_rows(
+            conn,
+            "SELECT constellation_key AS value, name_ja AS label FROM star_culture "
+            "WHERE constellation_key IS NOT NULL ORDER BY name_ja, star_culture_id",
+        ):
+            names = names_by_key.setdefault(to_text(row["value"]), [])
+            name = to_text(row["label"])
+            if name and name not in names:
+                names.append(name)
+        for option in options["constellation_key"]:
+            option["label"] = "、".join(names_by_key.get(option["value"], [])) or "名称未登録の星図"
 
     return {"options": options}
 
@@ -1172,7 +1183,8 @@ def validate_admin_references(conn, references):
         )
         missing = {str(value) for value in values} - {str(row["value"]) for row in rows}
         if missing:
-            raise ValueError(f"{key}の参照先が未登録です: {', '.join(sorted(missing))}")
+            label = SCHEMA_TABLES[definition["table"]]["label"]
+            raise ValueError(f"{label}の選択を確認してください。未登録の参照先があります")
 
 
 def validate_admin_column_references(conn, definition, values):
@@ -1458,7 +1470,7 @@ def delete_admin_table_row(table_name, primary_key_value):
         )
         if not existing:
             return None
-        for child_name, child_definition in ADMIN_TABLES.items():
+        for child_name, child_definition in SCHEMA_TABLES.items():
             if table_name == "star_culture" and child_name in owned_links:
                 continue
             for column in child_definition["columns"]:

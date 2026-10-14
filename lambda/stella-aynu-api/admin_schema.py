@@ -1,10 +1,10 @@
 """Admin schema snapshot matching tmp/ddl_v2.sql (2026-10-14).
 
-The API publishes these definitions to the editor. Composite keys follow the
-database constraint order; generated IDs use tmp/sequences_v2.sql.
+Only the six content tables are published to the editor. The full schema is
+retained for reference checks. Generated IDs use tmp/sequences_v2.sql.
 """
 
-ADMIN_TABLES = {
+SCHEMA_TABLES = {
     'star_culture': {
         'label': '星文化情報',
         'primary_key': 'star_culture_id',
@@ -404,10 +404,36 @@ ADMIN_TABLES = {
     },
 }
 
+ADMIN_TABLE_NAMES = (
+    'star_culture', 'astro_master', 'word_master',
+    'source_list', 'area_list', 'tradition_list',
+)
+ADMIN_TABLES = {
+    name: {
+        **SCHEMA_TABLES[name],
+        'list_columns': [column for column in SCHEMA_TABLES[name]['list_columns']
+                         if column not in SCHEMA_TABLES[name]['primary_keys']],
+        'columns': [dict(column) for column in SCHEMA_TABLES[name]['columns']],
+    }
+    for name in ADMIN_TABLE_NAMES
+}
+for table in ADMIN_TABLES.values():
+    for column in table['columns']:
+        if column.get('auto_sequence'):
+            column['hidden'] = True
+        elif column['name'] == 'constellation_key':
+            column['label'] = '星図の名称'
+        elif column['name'] == 'culture_cd':
+            column['label'] = '文化'
+        elif column['name'] == 'astro_cd':
+            column['label'] = '天体区分'
+        elif column['name'] == 'source_cd':
+            column['label'] = '出典区分'
+
 ADMIN_LOOKUP_TABLES = {
     'star_culture_id': {'table': 'star_culture', 'value_column': 'star_culture_id', 'label_column': 'name_ja'},
-    'astro_id': {'table': 'astro_master', 'value_column': 'astro_id', 'label_column': 'astro_name', 'detail_column': 'constellation'},
-    'word_id': {'table': 'word_master', 'value_column': 'word_id', 'label_column': 'word_ja', 'detail_column': 'word_en'},
+    'astro_id': {'table': 'astro_master', 'value_column': 'astro_id', 'label_column': 'astro_name'},
+    'word_id': {'table': 'word_master', 'value_column': 'word_id', 'label_column': 'word_ja'},
     'source_id': {'table': 'source_list', 'value_column': 'source_id', 'label_column': 'source_name'},
     'area_id': {'table': 'area_list', 'value_column': 'area_id', 'label_column': 'area_name'},
     'tradition_id': {'table': 'tradition_list', 'value_column': 'tradition_id', 'label_column': 'tradition_title'},
