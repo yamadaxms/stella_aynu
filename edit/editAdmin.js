@@ -82,6 +82,17 @@
     },
   ];
 
+  const SOURCE_LINK_FIELDS = [
+    { name: "source_id", label: "出典名", type: "select", lookup: "source_id", required: true },
+    { name: "page_info", label: "ページ情報", type: "text", maxLength: 32 },
+    { name: "memo", label: "メモ", type: "text" },
+  ];
+  const TABLE_RELATED_LINKS = {
+    star_culture: STAR_CULTURE_LINKS,
+    word_master: [{ key: "source", label: "単語出典リンク", addLabel: "出典を追加", fields: SOURCE_LINK_FIELDS }],
+    tradition_list: [{ key: "source", label: "伝承出典リンク", addLabel: "出典を追加", fields: SOURCE_LINK_FIELDS }],
+  };
+
   const ADMIN_TABLE_NAMES = [
     "star_culture", "astro_master", "word_master", "source_list", "area_list", "tradition_list",
   ];
@@ -168,7 +179,7 @@
       listColumns: (table.listColumns || table.columns.filter((column) => !column.readonly).slice(0, 6).map((column) => column.name))
         .filter((name) => !(table.primaryKeys || [table.primaryKey]).includes(name)),
       defaultSort: table.defaultSort || table.primaryKey,
-      relatedLinks: table.name === "star_culture" ? STAR_CULTURE_LINKS : undefined,
+      relatedLinks: TABLE_RELATED_LINKS[table.name],
     }));
     TABLES.splice(0, TABLES.length, ...definitions);
     if (!TABLES.some((table) => table.name === state.tableName)) state.tableName = TABLES[0].name;

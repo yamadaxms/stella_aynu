@@ -13,6 +13,10 @@ from admin_schema import ADMIN_TABLES, ADMIN_LOOKUP_TABLES, SCHEMA_TABLES
 
 
 DB_TIME_ZONE = "Asia/Tokyo"
+ADMIN_SOURCE_LINK_TABLES = {
+    "word_master": "word_source_link",
+    "tradition_list": "tradition_source_link",
+}
 
 
 # ============================================================
@@ -1272,6 +1276,62 @@ def replace_admin_star_culture_links(conn, star_culture_id, raw_links):
         )
 
 
+def get_admin_source_links(conn, table_name, owner_id):
+    """単語・伝承自身に紐づく出典を取得する。"""
+    link_table = ADMIN_SOURCE_LINK_TABLES[table_name]
+    owner_column = ADMIN_TABLES[table_name]["primary_key"]
+    rows = query_rows(
+        conn,
+        sql.SQL(
+            "SELECT source_id, page_info, memo FROM {table} "
+            "WHERE {owner_column} = %s ORDER BY source_id"
+        ).format(table=sql.Identifier(link_table), owner_column=sql.Identifier(owner_column)),
+        [owner_id],
+    )
+    return {"source": [serialize_admin_row(row) for row in rows]}
+
+
+def replace_admin_source_links(conn, table_name, owner_id, raw_links):
+    """編集した単語・伝承の出典だけを、親レコードと同じトランザクションで保存する。"""
+    if not isinstance(raw_links, dict) or set(raw_links) != {"source"}:
+        raise ValueError("出典リンク情報はsourceの配列で送信してください")
+    raw_rows = raw_links["source"]
+    if not isinstance(raw_rows, list) or any(not isinstance(row, dict) for row in raw_rows):
+        raise ValueError("出典リンク情報は行オブジェクトの配列で送信してください")
+
+    link_table = ADMIN_SOURCE_LINK_TABLES[table_name]
+    owner_column = ADMIN_TABLES[table_name]["primary_key"]
+    columns = admin_column_by_name(SCHEMA_TABLES[link_table])
+    columns["source_id"] = {**columns["source_id"], "label": "出典名"}
+    rows = []
+    seen = set()
+    for raw_row in raw_rows:
+        row = {
+            name: normalize_admin_value(columns[name], raw_row.get(name))
+            for name in ("source_id", "page_info", "memo")
+        }
+        reject_duplicate_link(row["source_id"], "出典リンク", seen)
+        rows.append(row)
+    validate_admin_references(conn, {"source_id": seen})
+
+    execute_query(
+        conn,
+        sql.SQL("DELETE FROM {table} WHERE {owner_column} = %s").format(
+            table=sql.Identifier(link_table), owner_column=sql.Identifier(owner_column),
+        ),
+        [owner_id],
+    )
+    for row in rows:
+        execute_query(
+            conn,
+            sql.SQL(
+                "INSERT INTO {table} ({owner_column}, source_id, page_info, memo) "
+                "VALUES (%s, %s, %s, %s)"
+            ).format(table=sql.Identifier(link_table), owner_column=sql.Identifier(owner_column)),
+            [owner_id, row["source_id"], row["page_info"], row["memo"]],
+        )
+
+
 def list_admin_table_rows(table_name, query_text="", limit=500, offset=0, sort_column=None, sort_direction="asc"):
     """編集対象テーブルの行を検索・ページング付きで取得する。"""
     definition = get_admin_table_definition(table_name)
@@ -1361,6 +1421,8 @@ def get_admin_table_row(table_name, primary_key_value):
         row = serialize_admin_row(rows[0])
         if table_name == "star_culture":
             row["links"] = get_admin_star_culture_links(conn, row[primary_key])
+        elif table_name in ADMIN_SOURCE_LINK_TABLES:
+            row["links"] = get_admin_source_links(conn, table_name, row[primary_key])
         return row
 
 
@@ -1395,6 +1457,10 @@ def create_admin_table_row(table_name, payload, updated_by=None):
         if table_name == "star_culture" and isinstance(payload, dict) and "links" in payload:
             replace_admin_star_culture_links(conn, row[definition["primary_key"]], payload.get("links"))
             row["links"] = get_admin_star_culture_links(conn, row[definition["primary_key"]])
+        elif table_name in ADMIN_SOURCE_LINK_TABLES:
+            if isinstance(payload, dict) and "links" in payload:
+                replace_admin_source_links(conn, table_name, row[definition["primary_key"]], payload["links"])
+            row["links"] = get_admin_source_links(conn, table_name, row[definition["primary_key"]])
         return row
 
 
@@ -1449,6 +1515,10 @@ def update_admin_table_row(table_name, primary_key_value, payload, updated_by=No
         if table_name == "star_culture" and isinstance(payload, dict) and "links" in payload:
             replace_admin_star_culture_links(conn, row[primary_key], payload.get("links"))
             row["links"] = get_admin_star_culture_links(conn, row[primary_key])
+        elif table_name in ADMIN_SOURCE_LINK_TABLES:
+            if isinstance(payload, dict) and "links" in payload:
+                replace_admin_source_links(conn, table_name, row[primary_key], payload["links"])
+            row["links"] = get_admin_source_links(conn, table_name, row[primary_key])
         return row
 
 
