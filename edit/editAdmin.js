@@ -782,7 +782,16 @@
   }
 
   function formatLookupOption(option) {
-    return String(option.label || "名称未登録");
+    const label = String(option.label ?? "").trim();
+    const value = String(option.value ?? "").trim();
+    // 旧形式のラベルでも、表示から参照IDだけを除く。option.valueは保持する。
+    if (value && label.startsWith(value)) {
+      const suffix = label.slice(value.length).trimStart();
+      if (/^[:：]/u.test(suffix)) {
+        return suffix.slice(1).trim() || "名称未登録";
+      }
+    }
+    return label || "名称未登録";
   }
 
   function getLookupOptions(column) {
