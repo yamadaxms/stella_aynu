@@ -1242,8 +1242,8 @@
     const table = getTableDefinition();
     els.editorFields.textContent = "";
     table.columns.forEach((column) => {
-      if (column.hidden || column.autoSequence) return;
-      if (state.mode === "create" && column.readonly) return;
+      if (column.hidden && !column.autoSequence) return;
+      if (state.mode === "create" && (column.autoSequence || column.readonly)) return;
       els.editorFields.appendChild(createField(column, row[column.name]));
     });
     renderRelatedEditor(table);
