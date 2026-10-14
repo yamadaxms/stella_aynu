@@ -38,7 +38,7 @@
       label: "星文化天体リンク",
       addLabel: "天体を追加",
       fields: [
-        { name: "astro_name", label: "天体名称", type: "select", lookup: "astro_name", required: true },
+        { name: "astro_id", label: "天体名称", type: "select", lookup: "astro_id", required: true },
         { name: "memo", label: "メモ", type: "text" },
       ],
     },
@@ -47,8 +47,8 @@
       label: "星文化出典リンク",
       addLabel: "出典を追加",
       fields: [
-        { name: "source_name", label: "出典名", type: "select", lookup: "source_name", required: true },
-        { name: "page_num", label: "ページ番号", type: "integer" },
+        { name: "source_id", label: "出典名", type: "select", lookup: "source_id", required: true },
+        { name: "page_info", label: "ページ情報", type: "text", maxLength: 32 },
         { name: "memo", label: "メモ", type: "text" },
       ],
     },
@@ -57,7 +57,7 @@
       label: "星文化伝承リンク",
       addLabel: "伝承を追加",
       fields: [
-        { name: "tradition_title", label: "伝承タイトル", type: "select", lookup: "tradition_title", required: true },
+        { name: "tradition_id", label: "伝承タイトル", type: "select", lookup: "tradition_id", required: true },
         { name: "memo", label: "メモ", type: "text" },
       ],
     },
@@ -66,9 +66,9 @@
       label: "伝承出典リンク",
       addLabel: "伝承出典を追加",
       fields: [
-        { name: "tradition_title", label: "伝承タイトル", type: "select", lookup: "tradition_title", required: true },
-        { name: "source_name", label: "出典名", type: "select", lookup: "source_name", required: true },
-        { name: "page_num", label: "ページ番号", type: "integer" },
+        { name: "tradition_id", label: "伝承タイトル", type: "select", lookup: "tradition_id", required: true },
+        { name: "source_id", label: "出典名", type: "select", lookup: "source_id", required: true },
+        { name: "page_info", label: "ページ情報", type: "text", maxLength: 32 },
         { name: "memo", label: "メモ", type: "text" },
       ],
     },
@@ -77,7 +77,7 @@
       label: "星文化地域リンク",
       addLabel: "地域を追加",
       fields: [
-        { name: "area_name", label: "地域名称", type: "select", lookup: "area_name", required: true },
+        { name: "area_id", label: "地域名称", type: "select", lookup: "area_id", required: true },
         { name: "memo", label: "メモ", type: "text" },
       ],
     },
@@ -87,7 +87,7 @@
       addLabel: "単語を追加",
       fields: [
         { name: "word_order", label: "単語順", type: "integer", required: true },
-        { name: "word_ja", label: "単語", type: "select", lookup: "word_ja", required: true },
+        { name: "word_id", label: "単語", type: "select", lookup: "word_id", required: true },
         { name: "memo", label: "メモ", type: "text" },
       ],
     },
@@ -99,17 +99,18 @@
       label: "星文化情報",
       primaryKey: "star_culture_id",
       defaultSort: "name_ja",
-      listColumns: ["name_ja", "name_en", "meaning", "is_published"],
+      listColumns: ["name_ja", "name_en", "meaning", "culture_cd", "is_published"],
       relatedLinks: STAR_CULTURE_LINKS,
       columns: [
         { name: "star_culture_id", label: "星文化ID", type: "integer", autoSequence: true },
-        { name: "name_ja", label: "名称", type: "text", required: true, maxLength: 32 },
+        { name: "name_ja", label: "名称", type: "text", required: true, maxLength: 64 },
         { name: "name_en", label: "名称（英字）", type: "text", maxLength: 64 },
-        { name: "meaning", label: "意味", type: "text", maxLength: 64 },
-        { name: "original_name_ja", label: "オリジナル名称", type: "text", required: true, maxLength: 32 },
+        { name: "meaning", label: "意味", type: "text", maxLength: 128 },
+        { name: "original_name_ja", label: "オリジナル名称", type: "text", required: true, maxLength: 64 },
         { name: "original_name_en", label: "オリジナル名称（英字）", type: "text", maxLength: 64 },
-        { name: "original_meaning", label: "オリジナル意味", type: "text", maxLength: 64 },
+        { name: "original_meaning", label: "オリジナル意味", type: "text", maxLength: 128 },
         { name: "memo", label: "メモ", type: "textarea" },
+        { name: "culture_cd", label: "文化", type: "select", lookup: "culture_cd", required: true, maxLength: 1 },
         { name: "is_published", label: "公開", type: "boolean", required: true, default: false },
         { name: "created_at", label: "作成日時", type: "datetime", readonly: true },
         { name: "updated_at", label: "更新日時", type: "datetime", readonly: true },
@@ -118,10 +119,11 @@
     {
       name: "tradition_list",
       label: "伝承リスト",
-      primaryKey: "tradition_title",
+      primaryKey: "tradition_id",
       defaultSort: "tradition_title",
       listColumns: ["tradition_title", "tradition_area", "is_published"],
       columns: [
+        { name: "tradition_id", label: "伝承ID", type: "integer", autoSequence: true },
         { name: "tradition_title", label: "伝承タイトル", type: "text", required: true, maxLength: 64 },
         { name: "tradition_content", label: "伝承内容", type: "textarea" },
         { name: "tradition_area", label: "伝承地域", type: "text", maxLength: 16 },
@@ -134,10 +136,11 @@
     {
       name: "source_list",
       label: "出典リスト",
-      primaryKey: "source_name",
+      primaryKey: "source_id",
       defaultSort: "source_name",
       listColumns: ["source_name", "source_cd", "author", "publication_date", "is_published"],
       columns: [
+        { name: "source_id", label: "出典ID", type: "integer", autoSequence: true },
         { name: "source_name", label: "出典名", type: "text", required: true, maxLength: 128 },
         { name: "source_cd", label: "出典区分", type: "select", lookup: "source_cd", required: true, maxLength: 1 },
         { name: "source_detail", label: "出典詳細", type: "textarea" },
@@ -156,10 +159,11 @@
     {
       name: "area_list",
       label: "地域リスト",
-      primaryKey: "area_name",
+      primaryKey: "area_id",
       defaultSort: "area_name",
       listColumns: ["area_name", "memo"],
       columns: [
+        { name: "area_id", label: "地域ID", type: "integer", autoSequence: true },
         { name: "area_name", label: "地域名称", type: "text", required: true, maxLength: 32 },
         { name: "memo", label: "メモ", type: "textarea" },
       ],
@@ -167,10 +171,11 @@
     {
       name: "astro_master",
       label: "天体マスタ",
-      primaryKey: "astro_name",
+      primaryKey: "astro_id",
       defaultSort: "astro_cd",
       listColumns: ["astro_name", "astro_cd", "constellation", "memo"],
       columns: [
+        { name: "astro_id", label: "天体ID", type: "integer", autoSequence: true },
         { name: "astro_name", label: "天体名称", type: "text", required: true, maxLength: 32 },
         { name: "astro_cd", label: "天体区分", type: "select", lookup: "astro_cd", required: true, maxLength: 1 },
         { name: "constellation", label: "星座", type: "text", nullable: true, maxLength: 16 },
@@ -180,10 +185,11 @@
     {
       name: "word_master",
       label: "単語マスタ",
-      primaryKey: "word_ja",
+      primaryKey: "word_id",
       defaultSort: "word_ja",
       listColumns: ["word_ja", "word_en", "word_meaning", "memo"],
       columns: [
+        { name: "word_id", label: "単語ID", type: "integer", autoSequence: true },
         { name: "word_ja", label: "単語", type: "text", required: true, maxLength: 32 },
         { name: "word_en", label: "単語（英字）", type: "text", maxLength: 64 },
         { name: "word_meaning", label: "意味", type: "textarea" },
@@ -1143,6 +1149,7 @@
       input.type = field.type === "integer" ? "number" : "text";
       if (field.type === "integer") input.step = "1";
       input.required = Boolean(field.required);
+      if (field.maxLength) input.maxLength = field.maxLength;
       input.value = currentValue ?? "";
     }
 
@@ -1334,6 +1341,7 @@
       state.selectedPrimaryKey = savedRow?.[table.primaryKey] ?? data[table.primaryKey] ?? null;
       state.originalPrimaryKey = state.selectedPrimaryKey;
       state.mode = "edit";
+      await loadLookupOptions();
       await loadRows();
       setStatus("保存しました。", "info");
     } catch (err) {

@@ -3,7 +3,8 @@
 .env
 .venv/*
 .vscode/*
+dist/*
+tmp/*
 lambda/stella-aynu-api/psycopg2/*
 lambda/stella-aynu-api/psycopg2_binary-2.9.12.dist-info/*
 lambda/stella-aynu-api/psycopg2_binary.libs/*
-ddl.sql

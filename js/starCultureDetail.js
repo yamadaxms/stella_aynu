@@ -221,7 +221,7 @@
       fields: ["star_source_link", "star_source_links", "source_links"],
       columns: [
         { label: "出典名", keys: ["source_name", "sourceName", "name"] },
-        { label: "ページ番号", keys: ["page_num", "pageNum"] },
+        { label: "ページ情報", keys: ["page_info", "pageInfo", "page_num", "pageNum"] },
         { label: "出典詳細", keys: ["source_detail", "sourceDetail"] },
         { label: "出版社", keys: ["publisher"] },
         { label: "著者/採取者", keys: ["author"] },
@@ -240,6 +240,7 @@
         { label: "伝承内容", keys: ["tradition_content", "traditionContent", "content"] },
         { label: "伝承地域", keys: ["tradition_area", "traditionArea"] },
         { label: "出典名", keys: ["source_name", "sourceName"] },
+        { label: "ページ情報", keys: ["page_info", "pageInfo"] },
         { label: "メモ", keys: ["memo", "tradition_memo", "traditionMemo"] },
         { label: "リンクメモ", keys: ["link_memo", "linkMemo"] },
       ],
@@ -263,6 +264,7 @@
         { label: "メモ", keys: ["memo", "word_memo", "wordMemo"] },
         { label: "リンクメモ", keys: ["link_memo", "linkMemo"] },
         { label: "出典名", keys: ["source_name", "sourceName"] },
+        { label: "ページ情報", keys: ["page_info", "pageInfo"] },
       ],
     },
   ];
@@ -284,6 +286,13 @@
       { label: "意味", value: getField(item, "meaning") || getField(item, "description") },
       { label: "オリジナル意味", value: getField(item, "original_meaning") },
     );
+    const culture = getField(item, "culture_name") || getField(item, "culture_cd");
+    if (culture) {
+      const tr = document.createElement("tr");
+      appendBasicCell(tr, "文化", culture);
+      tr.lastElementChild.colSpan = 3;
+      targetEls.basic.appendChild(tr);
+    }
   }
 
   function renderRelated(targetEls, item) {

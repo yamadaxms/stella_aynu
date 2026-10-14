@@ -246,11 +246,15 @@ def fetch_constellations(conn):
             sc.original_name_en,
             sc.original_meaning,
             sc.constellation_key,
+            sc.culture_cd,
+            ccm.culture_name,
             cl.ra,
             cl."dec"
         FROM star_culture sc
         LEFT JOIN constellation_list cl
           ON cl.constellation_key = sc.constellation_key
+        LEFT JOIN culture_cd_master ccm
+          ON ccm.culture_cd = sc.culture_cd
         WHERE sc.is_published = true
           AND (
             sc.constellation_key IS NULL
@@ -272,15 +276,16 @@ def fetch_constellations(conn):
         """
         SELECT
             sal.star_culture_id,
-            sal.astro_name,
+            sal.astro_id,
+            am.astro_name,
             sal.memo AS link_memo,
             am.constellation,
             am.astro_cd,
             am.memo
         FROM star_astro_link sal
         LEFT JOIN astro_master am
-          ON am.astro_name = sal.astro_name
-        ORDER BY sal.star_culture_id, am.astro_cd NULLS LAST, sal.astro_name
+          ON am.astro_id = sal.astro_id
+        ORDER BY sal.star_culture_id, am.astro_cd NULLS LAST, am.astro_name, sal.astro_id
         """,
     )
     star_area_rows = query_rows(
@@ -288,15 +293,16 @@ def fetch_constellations(conn):
         """
         SELECT
             sal.star_culture_id,
-            sal.area_name,
+            sal.area_id,
+            al.area_name,
             sal.memo AS link_memo,
             al.memo
         FROM star_area_link sal
         LEFT JOIN area_list al
-          ON al.area_name = sal.area_name
+          ON al.area_id = sal.area_id
         ORDER BY
             sal.star_culture_id,
-            CASE sal.area_name
+            CASE al.area_name
                 WHEN '全域' THEN 0
                 WHEN '地域区分Ⅰ' THEN 1
                 WHEN '地域区分Ⅱ' THEN 2
@@ -305,7 +311,7 @@ def fetch_constellations(conn):
                 WHEN '地域区分Ⅴ' THEN 5
                 ELSE 6
             END,
-            sal.area_name
+            al.area_name, sal.area_id
         """,
     )
     source_rows = query_rows(
@@ -313,8 +319,9 @@ def fetch_constellations(conn):
         """
         SELECT
             ssl.star_culture_id,
-            ssl.source_name,
-            ssl.page_num,
+            ssl.source_id,
+            sl.source_name,
+            ssl.page_info,
             ssl.memo AS link_memo,
             CASE WHEN sl.detail_flg = true THEN sl.source_detail ELSE NULL END AS source_detail,
             sl.publisher,
@@ -326,9 +333,9 @@ def fetch_constellations(conn):
             sl.source_cd
         FROM star_source_link ssl
         JOIN source_list sl
-          ON sl.source_name = ssl.source_name
+          ON sl.source_id = ssl.source_id
          AND sl.is_published = true
-        ORDER BY ssl.star_culture_id, sl.source_cd NULLS LAST, ssl.source_name
+        ORDER BY ssl.star_culture_id, sl.source_cd NULLS LAST, sl.source_name, ssl.source_id
         """,
     )
     tradition_rows = query_rows(
@@ -336,25 +343,28 @@ def fetch_constellations(conn):
         """
         SELECT
             stl.star_culture_id,
-            stl.tradition_title,
+            stl.tradition_id,
+            tl.tradition_title,
             stl.memo AS link_memo,
             tl.tradition_content,
             tl.tradition_area,
             tl.memo,
-            tsl.source_name
+            tsl.source_id,
+            tsl.source_name,
+            tsl.page_info
         FROM star_tradition_link stl
         JOIN tradition_list tl
-          ON tl.tradition_title = stl.tradition_title
+          ON tl.tradition_id = stl.tradition_id
          AND tl.is_published = true
         LEFT JOIN (
-            SELECT tsl.tradition_title, tsl.source_name
+            SELECT tsl.tradition_id, tsl.source_id, sl.source_name, tsl.page_info
             FROM tradition_source_link tsl
             JOIN source_list sl
-              ON sl.source_name = tsl.source_name
+              ON sl.source_id = tsl.source_id
              AND sl.is_published = true
         ) tsl
-          ON tsl.tradition_title = stl.tradition_title
-        ORDER BY stl.star_culture_id, stl.tradition_title, tsl.source_name
+          ON tsl.tradition_id = stl.tradition_id
+        ORDER BY stl.star_culture_id, tl.tradition_title, stl.tradition_id, tsl.source_name, tsl.source_id
         """,
     )
     word_rows = query_rows(
@@ -363,24 +373,27 @@ def fetch_constellations(conn):
         SELECT
             swl.star_culture_id,
             swl.word_order,
-            swl.word_ja,
+            swl.word_id,
+            wm.word_ja,
             swl.memo AS link_memo,
             wm.word_en,
             wm.word_meaning,
             wm.memo,
-            wsl.source_name
+            wsl.source_id,
+            wsl.source_name,
+            wsl.page_info
         FROM star_word_link swl
         LEFT JOIN word_master wm
-          ON wm.word_ja = swl.word_ja
+          ON wm.word_id = swl.word_id
         LEFT JOIN (
-            SELECT wsl.word_ja, wsl.source_name
+            SELECT wsl.word_id, wsl.source_id, sl.source_name, wsl.page_info
             FROM word_source_link wsl
             JOIN source_list sl
-              ON sl.source_name = wsl.source_name
+              ON sl.source_id = wsl.source_id
              AND sl.is_published = true
         ) wsl
-          ON wsl.word_ja = swl.word_ja
-        ORDER BY swl.star_culture_id, swl.word_order, wsl.source_name
+          ON wsl.word_id = swl.word_id
+        ORDER BY swl.star_culture_id, swl.word_order, swl.word_id, wsl.source_name, wsl.source_id
         """,
     )
 
@@ -401,6 +414,7 @@ def fetch_constellations(conn):
         if astro_name:
             astro_links_by_culture.setdefault(row["star_culture_id"], []).append(
                 {
+                    "astro_id": row["astro_id"],
                     "astro_name": astro_name,
                     "constellation": to_text(row["constellation"]),
                     "memo": to_text(row["memo"]),
@@ -412,7 +426,7 @@ def fetch_constellations(conn):
     area_links_by_culture = {}
     for row in star_area_rows:
         # 検索画面の区分列・その他列で使う伝承地域名を、星文化IDごとに配列で保持する。
-        # 地域区分Ⅰ-Ⅴの判定も s_area_list_c ではなく star_area_link.area_name を正規化して行う。
+        # 地域区分Ⅰ-Ⅴの判定は、area_idで結合した地域名を正規化して行う。
         area_name = to_text(row["area_name"])
         if not area_name:
             continue
@@ -425,6 +439,7 @@ def fetch_constellations(conn):
 
         area_links_by_culture.setdefault(row["star_culture_id"], []).append(
             {
+                "area_id": row["area_id"],
                 "area_name": area_name,
                 "memo": to_text(row["memo"]),
                 "link_memo": to_text(row["link_memo"]),
@@ -437,8 +452,9 @@ def fetch_constellations(conn):
         if source_name:
             source_links_by_culture.setdefault(row["star_culture_id"], []).append(
                 {
+                    "source_id": row["source_id"],
                     "source_name": source_name,
-                    "page_num": to_int(row["page_num"]),
+                    "page_info": to_text(row["page_info"]),
                     "source_detail": to_text(row["source_detail"]),
                     "publisher": to_text(row["publisher"]),
                     "author": to_text(row["author"]),
@@ -456,10 +472,13 @@ def fetch_constellations(conn):
         if tradition_title:
             tradition_links_by_culture.setdefault(row["star_culture_id"], []).append(
                 {
+                    "tradition_id": row["tradition_id"],
                     "tradition_title": tradition_title,
                     "tradition_content": to_text(row["tradition_content"]),
                     "tradition_area": to_text(row["tradition_area"]),
+                    "source_id": row["source_id"],
                     "source_name": to_text(row["source_name"]),
+                    "page_info": to_text(row["page_info"]),
                     "memo": to_text(row["memo"]),
                     "link_memo": to_text(row["link_memo"]),
                 }
@@ -472,12 +491,15 @@ def fetch_constellations(conn):
             word_links_by_culture.setdefault(row["star_culture_id"], []).append(
                 {
                     "word_order": to_int(row["word_order"]),
+                    "word_id": row["word_id"],
                     "word_ja": word_ja,
                     "word_en": to_text(row["word_en"]),
                     "word_meaning": to_text(row["word_meaning"]),
                     "memo": to_text(row["memo"]),
                     "link_memo": to_text(row["link_memo"]),
+                    "source_id": row["source_id"],
                     "source_name": to_text(row["source_name"]),
+                    "page_info": to_text(row["page_info"]),
                 }
             )
 
@@ -492,6 +514,8 @@ def fetch_constellations(conn):
             {
                 "key": str(row["star_culture_id"]),
                 "star_culture_id": row["star_culture_id"],
+                "culture_cd": to_text(row["culture_cd"]),
+                "culture_name": to_text(row["culture_name"]),
                 "ra": to_float(row["ra"]),
                 "dec": to_float(row["dec"]),
                 "name": row["name_ja"] or "",
@@ -621,18 +645,20 @@ ADMIN_TABLES = {
             "original_name_ja",
             "original_name_en",
             "original_meaning",
+            "culture_cd",
             "memo",
         ],
         "columns": [
             {"name": "star_culture_id", "label": "星文化ID", "type": "integer"},
-            {"name": "name_ja", "label": "名称", "type": "text", "required": True, "max_length": 32},
+            {"name": "name_ja", "label": "名称", "type": "text", "required": True, "max_length": 64},
             {"name": "name_en", "label": "英字表記", "type": "text", "max_length": 64},
-            {"name": "meaning", "label": "意味", "type": "text", "max_length": 64},
+            {"name": "meaning", "label": "意味", "type": "text", "max_length": 128},
             {"name": "constellation_key", "label": "星座線キー", "type": "select", "lookup": "constellation_key", "max_length": 32},
-            {"name": "original_name_ja", "label": "アイヌ語名称", "type": "text", "required": True, "max_length": 32},
+            {"name": "original_name_ja", "label": "アイヌ語名称", "type": "text", "required": True, "max_length": 64},
             {"name": "original_name_en", "label": "アイヌ語英字表記", "type": "text", "max_length": 64},
-            {"name": "original_meaning", "label": "アイヌ語原義", "type": "text", "max_length": 64},
+            {"name": "original_meaning", "label": "アイヌ語原義", "type": "text", "max_length": 128},
             {"name": "memo", "label": "メモ", "type": "textarea"},
+            {"name": "culture_cd", "label": "文化", "type": "select", "lookup": "culture_cd", "required": True, "max_length": 1},
             {"name": "is_published", "label": "公開", "type": "boolean", "required": True, "default": False},
             {"name": "created_at", "label": "作成日時", "type": "datetime", "readonly": True},
             {"name": "updated_at", "label": "更新日時", "type": "datetime", "readonly": True},
@@ -640,10 +666,13 @@ ADMIN_TABLES = {
     },
     "tradition_list": {
         "label": "伝承リスト",
-        "primary_key": "tradition_title",
+        "primary_key": "tradition_id",
+        "primary_key_sequence": "tradition_id_seq",
         "updated_by": True,
-        "search_columns": ["tradition_title", "tradition_content", "tradition_area", "memo"],
+        "order_by": ["tradition_title", "tradition_id"],
+        "search_columns": ["tradition_id", "tradition_title", "tradition_content", "tradition_area", "memo"],
         "columns": [
+            {"name": "tradition_id", "label": "伝承ID", "type": "integer"},
             {"name": "tradition_title", "label": "伝承タイトル", "type": "text", "required": True, "max_length": 64},
             {"name": "tradition_content", "label": "伝承内容", "type": "textarea"},
             {"name": "tradition_area", "label": "伝承地域", "type": "text", "max_length": 16},
@@ -655,10 +684,12 @@ ADMIN_TABLES = {
     },
     "source_list": {
         "label": "出典リスト",
-        "primary_key": "source_name",
+        "primary_key": "source_id",
+        "primary_key_sequence": "source_id_seq",
         "updated_by": True,
-        "order_by": ["source_cd", "source_name"],
+        "order_by": ["source_cd", "source_name", "source_id"],
         "search_columns": [
+            "source_id",
             "source_name",
             "source_detail",
             "publisher",
@@ -668,6 +699,7 @@ ADMIN_TABLES = {
             "memo",
         ],
         "columns": [
+            {"name": "source_id", "label": "出典ID", "type": "integer"},
             {"name": "source_name", "label": "出典名", "type": "text", "required": True, "max_length": 128},
             {"name": "source_cd", "label": "出典区分", "type": "select", "lookup": "source_cd", "required": True, "max_length": 1},
             {"name": "source_detail", "label": "出典詳細", "type": "textarea"},
@@ -685,11 +717,13 @@ ADMIN_TABLES = {
     },
     "astro_master": {
         "label": "天体マスタ",
-        "primary_key": "astro_name",
+        "primary_key": "astro_id",
+        "primary_key_sequence": "astro_id_seq",
         "updated_by": True,
-        "order_by": ["astro_cd", "astro_name"],
-        "search_columns": ["astro_name", "astro_cd", "constellation", "memo"],
+        "order_by": ["astro_cd", "astro_name", "astro_id"],
+        "search_columns": ["astro_id", "astro_name", "astro_cd", "constellation", "memo"],
         "columns": [
+            {"name": "astro_id", "label": "天体ID", "type": "integer"},
             {"name": "astro_name", "label": "天体名", "type": "text", "required": True, "max_length": 32},
             {"name": "astro_cd", "label": "天体区分", "type": "select", "lookup": "astro_cd", "required": True, "max_length": 1},
             {"name": "constellation", "label": "星座", "type": "text", "max_length": 16},
@@ -698,20 +732,26 @@ ADMIN_TABLES = {
     },
     "area_list": {
         "label": "地域リスト",
-        "primary_key": "area_name",
+        "primary_key": "area_id",
+        "primary_key_sequence": "area_id_seq",
         "updated_by": True,
-        "search_columns": ["area_name", "memo"],
+        "order_by": ["area_name", "area_id"],
+        "search_columns": ["area_id", "area_name", "memo"],
         "columns": [
+            {"name": "area_id", "label": "地域ID", "type": "integer"},
             {"name": "area_name", "label": "地域名", "type": "text", "required": True, "max_length": 32},
             {"name": "memo", "label": "メモ", "type": "textarea"},
         ],
     },
     "word_master": {
         "label": "単語マスタ",
-        "primary_key": "word_ja",
+        "primary_key": "word_id",
+        "primary_key_sequence": "word_id_seq",
         "updated_by": True,
-        "search_columns": ["word_ja", "word_en", "word_meaning", "memo"],
+        "order_by": ["word_ja", "word_id"],
+        "search_columns": ["word_id", "word_ja", "word_en", "word_meaning", "memo"],
         "columns": [
+            {"name": "word_id", "label": "単語ID", "type": "integer"},
             {"name": "word_ja", "label": "単語（日本語）", "type": "text", "required": True, "max_length": 32},
             {"name": "word_en", "label": "英字表記", "type": "text", "max_length": 64},
             {"name": "word_meaning", "label": "意味", "type": "textarea"},
@@ -721,6 +761,11 @@ ADMIN_TABLES = {
 }
 
 ADMIN_LOOKUP_TABLES = {
+    "culture_cd": {
+        "table": "culture_cd_master",
+        "value_column": "culture_cd",
+        "label_column": "culture_name",
+    },
     "astro_cd": {
         "table": "astro_cd_master",
         "value_column": "astro_cd",
@@ -741,32 +786,35 @@ ADMIN_LOOKUP_TABLES = {
         "value_column": "constellation_key",
         "label_column": "constellation_key",
     },
-    "astro_name": {
+    "astro_id": {
         "table": "astro_master",
-        "value_column": "astro_name",
+        "value_column": "astro_id",
         "label_column": "astro_name",
         "order_by": ["astro_cd", "astro_name"],
     },
-    "source_name": {
+    "source_id": {
         "table": "source_list",
-        "value_column": "source_name",
+        "value_column": "source_id",
         "label_column": "source_name",
         "order_by": ["source_cd", "source_name"],
     },
-    "tradition_title": {
+    "tradition_id": {
         "table": "tradition_list",
-        "value_column": "tradition_title",
+        "value_column": "tradition_id",
         "label_column": "tradition_title",
+        "order_by": ["tradition_title", "tradition_id"],
     },
-    "area_name": {
+    "area_id": {
         "table": "area_list",
-        "value_column": "area_name",
+        "value_column": "area_id",
         "label_column": "area_name",
+        "order_by": ["area_name", "area_id"],
     },
-    "word_ja": {
+    "word_id": {
         "table": "word_master",
-        "value_column": "word_ja",
+        "value_column": "word_id",
         "label_column": "word_ja",
+        "order_by": ["word_ja", "word_id"],
     },
 }
 
@@ -1058,62 +1106,62 @@ def get_admin_star_culture_links(conn, star_culture_id):
     astro_rows = query_rows(
         conn,
         """
-        SELECT astro_name, memo
+        SELECT astro_id, memo
         FROM star_astro_link
         WHERE star_culture_id = %s
-        ORDER BY astro_name
+        ORDER BY astro_id
         """,
         params,
     )
     source_rows = query_rows(
         conn,
         """
-        SELECT source_name, page_num, memo
+        SELECT source_id, page_info, memo
         FROM star_source_link
         WHERE star_culture_id = %s
-        ORDER BY source_name
+        ORDER BY source_id
         """,
         params,
     )
     tradition_rows = query_rows(
         conn,
         """
-        SELECT tradition_title, memo
+        SELECT tradition_id, memo
         FROM star_tradition_link
         WHERE star_culture_id = %s
-        ORDER BY tradition_title
+        ORDER BY tradition_id
         """,
         params,
     )
     tradition_source_rows = query_rows(
         conn,
         """
-        SELECT tsl.tradition_title, tsl.source_name, tsl.page_num, tsl.memo
+        SELECT tsl.tradition_id, tsl.source_id, tsl.page_info, tsl.memo
         FROM tradition_source_link tsl
         WHERE EXISTS (
             SELECT 1
             FROM star_tradition_link stl
             WHERE stl.star_culture_id = %s
-              AND stl.tradition_title = tsl.tradition_title
+              AND stl.tradition_id = tsl.tradition_id
         )
-        ORDER BY tsl.tradition_title, tsl.source_name
+        ORDER BY tsl.tradition_id, tsl.source_id
         """,
         params,
     )
     area_rows = query_rows(
         conn,
         """
-        SELECT area_name, memo
+        SELECT area_id, memo
         FROM star_area_link
         WHERE star_culture_id = %s
-        ORDER BY area_name
+        ORDER BY area_id
         """,
         params,
     )
     word_rows = query_rows(
         conn,
         """
-        SELECT word_order, word_ja, memo
+        SELECT word_order, word_id, memo
         FROM star_word_link
         WHERE star_culture_id = %s
         ORDER BY word_order
@@ -1147,7 +1195,7 @@ def normalize_link_int(row, name, label, *, required=False):
             raise ValueError(f"{label}は必須です")
         return None
     try:
-        return int(value)
+        return int(str(value).strip())
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{label}は整数で入力してください") from exc
 
@@ -1173,81 +1221,115 @@ def normalize_admin_star_culture_links(raw_links):
     seen = set()
     for row in links.get("astro") or []:
         item = {
-            "astro_name": normalize_link_text(row, "astro_name", "天体名", required=True, max_length=32),
+            "astro_id": normalize_link_int(row, "astro_id", "天体名", required=True),
             "memo": normalize_link_text(row, "memo", "メモ"),
         }
-        reject_duplicate_link(item["astro_name"], "天体リンク", seen)
+        reject_duplicate_link(item["astro_id"], "天体リンク", seen)
         normalized["astro"].append(item)
 
     seen = set()
     for row in links.get("source") or []:
         item = {
-            "source_name": normalize_link_text(row, "source_name", "出典名", required=True, max_length=128),
-            "page_num": normalize_link_int(row, "page_num", "ページ番号"),
+            "source_id": normalize_link_int(row, "source_id", "出典名", required=True),
+            "page_info": normalize_link_text(row, "page_info", "ページ情報", max_length=32),
             "memo": normalize_link_text(row, "memo", "メモ"),
         }
-        reject_duplicate_link(item["source_name"], "出典リンク", seen)
+        reject_duplicate_link(item["source_id"], "出典リンク", seen)
         normalized["source"].append(item)
 
     seen = set()
     for row in links.get("tradition") or []:
         item = {
-            "tradition_title": normalize_link_text(row, "tradition_title", "伝承タイトル", required=True, max_length=64),
+            "tradition_id": normalize_link_int(row, "tradition_id", "伝承タイトル", required=True),
             "memo": normalize_link_text(row, "memo", "メモ"),
         }
-        reject_duplicate_link(item["tradition_title"], "伝承リンク", seen)
+        reject_duplicate_link(item["tradition_id"], "伝承リンク", seen)
         normalized["tradition"].append(item)
 
     seen = set()
     for row in links.get("tradition_source") or []:
         item = {
-            "tradition_title": normalize_link_text(row, "tradition_title", "伝承タイトル", required=True, max_length=64),
-            "source_name": normalize_link_text(row, "source_name", "出典名", required=True, max_length=128),
-            "page_num": normalize_link_int(row, "page_num", "ページ番号"),
+            "tradition_id": normalize_link_int(row, "tradition_id", "伝承タイトル", required=True),
+            "source_id": normalize_link_int(row, "source_id", "出典名", required=True),
+            "page_info": normalize_link_text(row, "page_info", "ページ情報", max_length=32),
             "memo": normalize_link_text(row, "memo", "メモ"),
         }
-        reject_duplicate_link((item["tradition_title"], item["source_name"]), "伝承出典リンク", seen)
+        reject_duplicate_link((item["tradition_id"], item["source_id"]), "伝承出典リンク", seen)
         normalized["tradition_source"].append(item)
 
     seen = set()
     for row in links.get("area") or []:
         item = {
-            "area_name": normalize_link_text(row, "area_name", "地域名", required=True, max_length=32),
+            "area_id": normalize_link_int(row, "area_id", "地域名", required=True),
             "memo": normalize_link_text(row, "memo", "メモ"),
         }
-        reject_duplicate_link(item["area_name"], "地域リンク", seen)
+        reject_duplicate_link(item["area_id"], "地域リンク", seen)
         normalized["area"].append(item)
 
     seen = set()
     for row in links.get("word") or []:
         item = {
             "word_order": normalize_link_int(row, "word_order", "単語順", required=True),
-            "word_ja": normalize_link_text(row, "word_ja", "単語", required=True, max_length=32),
+            "word_id": normalize_link_int(row, "word_id", "単語", required=True),
             "memo": normalize_link_text(row, "memo", "メモ"),
         }
-        reject_duplicate_link(item["word_order"], "単語リンク", seen)
+        reject_duplicate_link(item["word_order"], "単語リンクの順序", seen)
         normalized["word"].append(item)
 
-    linked_traditions = {row["tradition_title"] for row in normalized["tradition"]}
+    linked_traditions = {row["tradition_id"] for row in normalized["tradition"]}
     for row in normalized["tradition_source"]:
-        if row["tradition_title"] not in linked_traditions:
+        if row["tradition_id"] not in linked_traditions:
             raise ValueError("伝承出典リンクの伝承タイトルは星文化伝承リンクにも追加してください")
 
     return normalized
 
 
+def validate_admin_references(conn, references):
+    """DDLに外部キー制約がないため、保存するID・コードの参照先を確認する。"""
+    for key, values in references.items():
+        if not values:
+            continue
+        definition = ADMIN_LOOKUP_TABLES[key]
+        rows = query_rows(
+            conn,
+            sql.SQL("SELECT {column} AS value FROM {table} WHERE {column} = ANY(%s)").format(
+                column=sql.Identifier(definition["value_column"]),
+                table=sql.Identifier(definition["table"]),
+            ),
+            [list(values)],
+        )
+        missing = {str(value) for value in values} - {str(row["value"]) for row in rows}
+        if missing:
+            raise ValueError(f"{key}の参照先が未登録です: {', '.join(sorted(missing))}")
+
+
+def validate_admin_column_references(conn, definition, values):
+    references = {
+        column["lookup"]: [values[column["name"]]]
+        for column in definition["columns"]
+        if column.get("lookup") and values.get(column["name"]) not in (None, "")
+    }
+    validate_admin_references(conn, references)
+
+
 def replace_admin_star_culture_links(conn, star_culture_id, raw_links):
     """星文化情報のリンク行を画面payloadの内容で置き換える。"""
     links = normalize_admin_star_culture_links(raw_links)
+    references = {}
+    for rows in links.values():
+        for row in rows:
+            for key in ("astro_id", "source_id", "tradition_id", "area_id", "word_id"):
+                if key in row:
+                    references.setdefault(key, set()).add(row[key])
+    validate_admin_references(conn, references)
     old_tradition_rows = query_rows(
         conn,
-        "SELECT tradition_title FROM star_tradition_link WHERE star_culture_id = %s",
+        "SELECT tradition_id FROM star_tradition_link WHERE star_culture_id = %s",
         [star_culture_id],
     )
-    affected_traditions = {to_text(row["tradition_title"]) for row in old_tradition_rows}
-    affected_traditions.update(row["tradition_title"] for row in links["tradition"])
-    affected_traditions.update(row["tradition_title"] for row in links["tradition_source"])
-    affected_traditions.discard("")
+    affected_traditions = {row["tradition_id"] for row in old_tradition_rows}
+    affected_traditions.update(row["tradition_id"] for row in links["tradition"])
+    affected_traditions.update(row["tradition_id"] for row in links["tradition_source"])
 
     for table in ("star_astro_link", "star_source_link", "star_tradition_link", "star_area_link", "star_word_link"):
         execute_query(
@@ -1259,7 +1341,7 @@ def replace_admin_star_culture_links(conn, star_culture_id, raw_links):
     if affected_traditions:
         execute_query(
             conn,
-            "DELETE FROM tradition_source_link WHERE tradition_title = ANY(%s)",
+            "DELETE FROM tradition_source_link WHERE tradition_id = ANY(%s)",
             [list(affected_traditions)],
         )
 
@@ -1267,55 +1349,55 @@ def replace_admin_star_culture_links(conn, star_culture_id, raw_links):
         execute_query(
             conn,
             """
-            INSERT INTO star_astro_link (star_culture_id, astro_name, memo)
+            INSERT INTO star_astro_link (star_culture_id, astro_id, memo)
             VALUES (%s, %s, %s)
             """,
-            [star_culture_id, row["astro_name"], row["memo"]],
+            [star_culture_id, row["astro_id"], row["memo"]],
         )
     for row in links["source"]:
         execute_query(
             conn,
             """
-            INSERT INTO star_source_link (star_culture_id, source_name, page_num, memo)
+            INSERT INTO star_source_link (star_culture_id, source_id, page_info, memo)
             VALUES (%s, %s, %s, %s)
             """,
-            [star_culture_id, row["source_name"], row["page_num"], row["memo"]],
+            [star_culture_id, row["source_id"], row["page_info"], row["memo"]],
         )
     for row in links["tradition"]:
         execute_query(
             conn,
             """
-            INSERT INTO star_tradition_link (star_culture_id, tradition_title, memo)
+            INSERT INTO star_tradition_link (star_culture_id, tradition_id, memo)
             VALUES (%s, %s, %s)
             """,
-            [star_culture_id, row["tradition_title"], row["memo"]],
+            [star_culture_id, row["tradition_id"], row["memo"]],
         )
     for row in links["tradition_source"]:
         execute_query(
             conn,
             """
-            INSERT INTO tradition_source_link (tradition_title, source_name, page_num, memo)
+            INSERT INTO tradition_source_link (tradition_id, source_id, page_info, memo)
             VALUES (%s, %s, %s, %s)
             """,
-            [row["tradition_title"], row["source_name"], row["page_num"], row["memo"]],
+            [row["tradition_id"], row["source_id"], row["page_info"], row["memo"]],
         )
     for row in links["area"]:
         execute_query(
             conn,
             """
-            INSERT INTO star_area_link (star_culture_id, area_name, memo)
+            INSERT INTO star_area_link (star_culture_id, area_id, memo)
             VALUES (%s, %s, %s)
             """,
-            [star_culture_id, row["area_name"], row["memo"]],
+            [star_culture_id, row["area_id"], row["memo"]],
         )
     for row in links["word"]:
         execute_query(
             conn,
             """
-            INSERT INTO star_word_link (star_culture_id, word_order, word_ja, memo)
+            INSERT INTO star_word_link (star_culture_id, word_order, word_id, memo)
             VALUES (%s, %s, %s, %s)
             """,
-            [star_culture_id, row["word_order"], row["word_ja"], row["memo"]],
+            [star_culture_id, row["word_order"], row["word_id"], row["memo"]],
         )
 
 
@@ -1411,6 +1493,7 @@ def create_admin_table_row(table_name, payload, updated_by=None):
     returning_columns = admin_column_names(definition)
 
     with get_connection() as conn:
+        validate_admin_column_references(conn, definition, values)
         apply_admin_sequence_primary_key(conn, definition, values)
         if not values:
             raise ValueError("登録する値がありません")
@@ -1465,6 +1548,7 @@ def update_admin_table_row(table_name, primary_key_value, payload, updated_by=No
     params.append(primary_key_value)
 
     with get_connection() as conn:
+        validate_admin_column_references(conn, definition, values)
         rows = query_rows(
             conn,
             sql.SQL(
