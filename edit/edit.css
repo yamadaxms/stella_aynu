@@ -88,7 +88,8 @@ textarea:focus-visible {
 .edit-session,
 .toolbar,
 .editor-actions,
-.status-row {
+.status-row,
+.pagination {
   display: flex;
   align-items: center;
   gap: 0.5rem;

@@ -6,9 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex,nofollow" />
 
-    <link rel="stylesheet" href="edit.css?v=v067" />
+    <link rel="stylesheet" href="edit.css?v=v069" />
     <script src="config.js?v=v067"></script>
-    <script src="editAdmin.js?v=v068" defer></script>
+    <script src="editAdmin.js?v=v069" defer></script>
   </head>
   <body>
     <header class="edit-header">
@@ -51,10 +51,10 @@
         <section class="list-panel" aria-labelledby="list-heading">
           <div class="panel-header">
             <div>
-              <h2 id="list-heading">伝承リスト</h2>
+              <h2 id="list-heading">星文化情報</h2>
             </div>
             <div class="toolbar">
-              <button id="new-row-button" class="button button-primary" type="button">新規追加</button>
+              <button id="new-row-button" class="button button-primary" type="button" disabled>新規追加</button>
               <button id="reload-button" class="button" type="button">再読み込み</button>
             </div>
           </div>
@@ -69,6 +69,10 @@
 
           <div class="status-row">
             <p id="row-count" class="row-count" aria-live="polite">0件</p>
+            <div class="pagination" aria-label="一覧のページ切り替え">
+              <button id="previous-page-button" class="button button-muted" type="button" disabled>前へ</button>
+              <button id="next-page-button" class="button button-muted" type="button" disabled>次へ</button>
+            </div>
             <p id="list-loading" class="loading-text" aria-live="polite" hidden>読み込み中</p>
           </div>
           <div id="status-message" class="status-message" role="alert" aria-live="assertive" hidden></div>

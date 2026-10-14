@@ -1,12 +1,15 @@
+import json
 import os
 import unicodedata
 from datetime import date, datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP, localcontext
 from urllib.parse import urlparse
 
 import psycopg2
 from psycopg2 import sql
 from psycopg2.extras import RealDictCursor
+
+from admin_schema import ADMIN_TABLES, ADMIN_LOOKUP_TABLES
 
 
 DB_TIME_ZONE = "Asia/Tokyo"
@@ -630,194 +633,6 @@ def build_aynu_data(conn=None):
 # /edit 配下の管理画面から扱うテーブルを明示的にホワイトリスト化する。
 # テーブル名・列名はユーザー入力からSQLへ直接渡さず、この定義内の識別子だけを psycopg2.sql で組み立てる。
 
-ADMIN_TABLES = {
-    "star_culture": {
-        "label": "星文化情報",
-        "primary_key": "star_culture_id",
-        "primary_key_sequence": "star_culture_id_seq",
-        "updated_by": True,
-        "search_columns": [
-            "star_culture_id",
-            "name_ja",
-            "name_en",
-            "meaning",
-            "constellation_key",
-            "original_name_ja",
-            "original_name_en",
-            "original_meaning",
-            "culture_cd",
-            "memo",
-        ],
-        "columns": [
-            {"name": "star_culture_id", "label": "星文化ID", "type": "integer"},
-            {"name": "name_ja", "label": "名称", "type": "text", "required": True, "max_length": 64},
-            {"name": "name_en", "label": "英字表記", "type": "text", "max_length": 64},
-            {"name": "meaning", "label": "意味", "type": "text", "max_length": 128},
-            {"name": "constellation_key", "label": "星座線キー", "type": "select", "lookup": "constellation_key", "max_length": 32},
-            {"name": "original_name_ja", "label": "アイヌ語名称", "type": "text", "required": True, "max_length": 64},
-            {"name": "original_name_en", "label": "アイヌ語英字表記", "type": "text", "max_length": 64},
-            {"name": "original_meaning", "label": "アイヌ語原義", "type": "text", "max_length": 128},
-            {"name": "memo", "label": "メモ", "type": "textarea"},
-            {"name": "culture_cd", "label": "文化", "type": "select", "lookup": "culture_cd", "required": True, "max_length": 1},
-            {"name": "is_published", "label": "公開", "type": "boolean", "required": True, "default": False},
-            {"name": "created_at", "label": "作成日時", "type": "datetime", "readonly": True},
-            {"name": "updated_at", "label": "更新日時", "type": "datetime", "readonly": True},
-        ],
-    },
-    "tradition_list": {
-        "label": "伝承リスト",
-        "primary_key": "tradition_id",
-        "primary_key_sequence": "tradition_id_seq",
-        "updated_by": True,
-        "order_by": ["tradition_title", "tradition_id"],
-        "search_columns": ["tradition_id", "tradition_title", "tradition_content", "tradition_area", "memo"],
-        "columns": [
-            {"name": "tradition_id", "label": "伝承ID", "type": "integer"},
-            {"name": "tradition_title", "label": "伝承タイトル", "type": "text", "required": True, "max_length": 64},
-            {"name": "tradition_content", "label": "伝承内容", "type": "textarea"},
-            {"name": "tradition_area", "label": "伝承地域", "type": "text", "max_length": 16},
-            {"name": "memo", "label": "メモ", "type": "textarea"},
-            {"name": "is_published", "label": "公開", "type": "boolean", "required": True, "default": False},
-            {"name": "created_at", "label": "作成日時", "type": "datetime", "readonly": True},
-            {"name": "updated_at", "label": "更新日時", "type": "datetime", "readonly": True},
-        ],
-    },
-    "source_list": {
-        "label": "出典リスト",
-        "primary_key": "source_id",
-        "primary_key_sequence": "source_id_seq",
-        "updated_by": True,
-        "order_by": ["source_cd", "source_name", "source_id"],
-        "search_columns": [
-            "source_id",
-            "source_name",
-            "source_detail",
-            "publisher",
-            "author",
-            "publication_area",
-            "url",
-            "memo",
-        ],
-        "columns": [
-            {"name": "source_id", "label": "出典ID", "type": "integer"},
-            {"name": "source_name", "label": "出典名", "type": "text", "required": True, "max_length": 128},
-            {"name": "source_cd", "label": "出典区分", "type": "select", "lookup": "source_cd", "required": True, "max_length": 1},
-            {"name": "source_detail", "label": "出典詳細", "type": "textarea"},
-            {"name": "detail_flg", "label": "出典詳細公開", "type": "boolean", "required": True, "default": False},
-            {"name": "publisher", "label": "出版社", "type": "text", "max_length": 32},
-            {"name": "author", "label": "著者/採取者", "type": "text", "max_length": 128},
-            {"name": "publication_date", "label": "発行/採集年月日", "type": "text", "max_length": 32},
-            {"name": "publication_area", "label": "採集地域", "type": "text", "max_length": 16},
-            {"name": "url", "label": "URL", "type": "url", "max_length": 2048},
-            {"name": "memo", "label": "メモ", "type": "textarea"},
-            {"name": "is_published", "label": "公開", "type": "boolean", "required": True, "default": False},
-            {"name": "created_at", "label": "作成日時", "type": "datetime", "readonly": True},
-            {"name": "updated_at", "label": "更新日時", "type": "datetime", "readonly": True},
-        ],
-    },
-    "astro_master": {
-        "label": "天体マスタ",
-        "primary_key": "astro_id",
-        "primary_key_sequence": "astro_id_seq",
-        "updated_by": True,
-        "order_by": ["astro_cd", "astro_name", "astro_id"],
-        "search_columns": ["astro_id", "astro_name", "astro_cd", "constellation", "memo"],
-        "columns": [
-            {"name": "astro_id", "label": "天体ID", "type": "integer"},
-            {"name": "astro_name", "label": "天体名", "type": "text", "required": True, "max_length": 32},
-            {"name": "astro_cd", "label": "天体区分", "type": "select", "lookup": "astro_cd", "required": True, "max_length": 1},
-            {"name": "constellation", "label": "星座", "type": "text", "max_length": 16},
-            {"name": "memo", "label": "メモ", "type": "textarea"},
-        ],
-    },
-    "area_list": {
-        "label": "地域リスト",
-        "primary_key": "area_id",
-        "primary_key_sequence": "area_id_seq",
-        "updated_by": True,
-        "order_by": ["area_name", "area_id"],
-        "search_columns": ["area_id", "area_name", "memo"],
-        "columns": [
-            {"name": "area_id", "label": "地域ID", "type": "integer"},
-            {"name": "area_name", "label": "地域名", "type": "text", "required": True, "max_length": 32},
-            {"name": "memo", "label": "メモ", "type": "textarea"},
-        ],
-    },
-    "word_master": {
-        "label": "単語マスタ",
-        "primary_key": "word_id",
-        "primary_key_sequence": "word_id_seq",
-        "updated_by": True,
-        "order_by": ["word_ja", "word_id"],
-        "search_columns": ["word_id", "word_ja", "word_en", "word_meaning", "memo"],
-        "columns": [
-            {"name": "word_id", "label": "単語ID", "type": "integer"},
-            {"name": "word_ja", "label": "単語（日本語）", "type": "text", "required": True, "max_length": 32},
-            {"name": "word_en", "label": "英字表記", "type": "text", "max_length": 64},
-            {"name": "word_meaning", "label": "意味", "type": "textarea"},
-            {"name": "memo", "label": "メモ", "type": "textarea"},
-        ],
-    },
-}
-
-ADMIN_LOOKUP_TABLES = {
-    "culture_cd": {
-        "table": "culture_cd_master",
-        "value_column": "culture_cd",
-        "label_column": "culture_name",
-    },
-    "astro_cd": {
-        "table": "astro_cd_master",
-        "value_column": "astro_cd",
-        "label_column": "astro_name",
-    },
-    "source_cd": {
-        "table": "source_cd_master",
-        "value_column": "source_cd",
-        "label_column": "source_name",
-    },
-    "usage_status_cd": {
-        "table": "usage_status_cd_master",
-        "value_column": "usage_status_cd",
-        "label_column": "usage_status_name",
-    },
-    "constellation_key": {
-        "table": "constellation_list",
-        "value_column": "constellation_key",
-        "label_column": "constellation_key",
-    },
-    "astro_id": {
-        "table": "astro_master",
-        "value_column": "astro_id",
-        "label_column": "astro_name",
-        "order_by": ["astro_cd", "astro_name"],
-    },
-    "source_id": {
-        "table": "source_list",
-        "value_column": "source_id",
-        "label_column": "source_name",
-        "order_by": ["source_cd", "source_name"],
-    },
-    "tradition_id": {
-        "table": "tradition_list",
-        "value_column": "tradition_id",
-        "label_column": "tradition_title",
-        "order_by": ["tradition_title", "tradition_id"],
-    },
-    "area_id": {
-        "table": "area_list",
-        "value_column": "area_id",
-        "label_column": "area_name",
-        "order_by": ["area_name", "area_id"],
-    },
-    "word_id": {
-        "table": "word_master",
-        "value_column": "word_id",
-        "label_column": "word_ja",
-        "order_by": ["word_ja", "word_id"],
-    },
-}
-
 ADMIN_UPDATED_BY_COLUMN = "updated_by"
 
 
@@ -837,6 +652,9 @@ def get_admin_tables_metadata():
                 "name": name,
                 "label": definition["label"],
                 "primaryKey": definition["primary_key"],
+                "primaryKeys": admin_primary_key_columns(definition),
+                "listColumns": definition["list_columns"],
+                "defaultSort": definition["default_sort"],
                 "columns": definition["columns"],
             }
         )
@@ -849,14 +667,17 @@ def get_admin_lookup_options():
     with get_connection() as conn:
         for key, definition in ADMIN_LOOKUP_TABLES.items():
             order_columns = definition.get("order_by") or [definition["value_column"]]
+            detail_column = definition.get("detail_column")
             rows = query_rows(
                 conn,
                 sql.SQL(
-                    "SELECT {value_column} AS value, {label_column} AS label "
+                    "SELECT {value_column} AS value, {label_column} AS label{detail} "
                     "FROM {table} ORDER BY {order_by}"
                 ).format(
                     value_column=sql.Identifier(definition["value_column"]),
                     label_column=sql.Identifier(definition["label_column"]),
+                    detail=(sql.SQL(", {} AS detail").format(sql.Identifier(detail_column))
+                            if detail_column else sql.SQL("")),
                     table=sql.Identifier(definition["table"]),
                     order_by=sql.SQL(", ").join(sql.Identifier(column) for column in order_columns),
                 ),
@@ -864,7 +685,7 @@ def get_admin_lookup_options():
             options[key] = [
                 {
                     "value": to_text(row["value"]),
-                    "label": to_text(row["label"]),
+                    "label": " / ".join(filter(None, [to_text(row["label"]), to_text(row.get("detail"))])),
                 }
                 for row in rows
             ]
@@ -884,6 +705,35 @@ def admin_column_names(definition, include_readonly=True):
 def admin_column_by_name(definition):
     """列名から列定義へ引ける辞書を作る。"""
     return {column["name"]: column for column in definition["columns"]}
+
+
+def admin_primary_key_columns(definition):
+    return definition.get("primary_keys") or [definition["primary_key"]]
+
+
+def normalize_admin_primary_key(definition, value):
+    """Single keys remain scalar; composite keys are JSON objects in the pk parameter."""
+    keys = admin_primary_key_columns(definition)
+    if not isinstance(value, dict):
+        if len(keys) == 1:
+            value = {keys[0]: value}
+        else:
+            try:
+                value = json.loads(value)
+            except (TypeError, ValueError) as exc:
+                raise ValueError("複合主キーは各主キー列を含むJSONオブジェクトで指定してください") from exc
+    if not isinstance(value, dict) or set(value) != set(keys):
+        raise ValueError(f"主キーには {', '.join(keys)} を指定してください")
+    columns = admin_column_by_name(definition)
+    return {key: normalize_admin_value(dict(columns[key], required=True), value[key]) for key in keys}
+
+
+def admin_primary_key_where(definition, value):
+    values = normalize_admin_primary_key(definition, value)
+    where = sql.SQL(" AND ").join(
+        sql.SQL("{} = %s").format(sql.Identifier(key)) for key in values
+    )
+    return where, list(values.values())
 
 
 def apply_admin_updated_by(values, updated_by):
@@ -917,16 +767,12 @@ def apply_admin_sequence_primary_key(conn, definition, values):
 
 def reject_admin_primary_key_change(definition, values, primary_key_value):
     """更新時に主キーが変更されないことを確認し、同値なら更新対象から外す。"""
-    primary_key = definition["primary_key"]
-    if primary_key not in values:
-        return
-
-    next_value = str(values[primary_key] or "")
-    current_value = str(primary_key_value or "")
-    if next_value != current_value:
-        raise ValueError("主キーは変更できません")
-
-    del values[primary_key]
+    current = normalize_admin_primary_key(definition, primary_key_value)
+    for key, value in current.items():
+        if key in values:
+            if values[key] != value:
+                raise ValueError("主キーは変更できません")
+            del values[key]
 
 
 def serialize_admin_value(value):
@@ -962,7 +808,7 @@ def normalize_admin_bool(value):
 
 def normalize_admin_value(column, value):
     """列定義に従ってリクエスト値をDB保存用へ正規化する。"""
-    column_type = column.get("type", "text")
+    column_type = column.get("value_type", column.get("type", "text"))
 
     if column_type == "boolean":
         return normalize_admin_bool(value)
@@ -984,9 +830,28 @@ def normalize_admin_value(column, value):
 
     if column_type == "integer":
         try:
-            return int(text)
+            number = int(text)
         except ValueError as exc:
             raise ValueError(f"{column['label']}は整数で入力してください") from exc
+        bits = column.get("bits", 64)
+        if not -(2 ** (bits - 1)) <= number < 2 ** (bits - 1):
+            raise ValueError(f"{column['label']}は{bits}ビット整数の範囲で入力してください")
+        return number
+
+    if column_type == "number":
+        try:
+            precision, scale = column["precision"], column["scale"]
+            with localcontext() as context:
+                context.prec = max(precision + 2, 32)
+                number = Decimal(text).quantize(Decimal(1).scaleb(-scale), rounding=ROUND_HALF_UP)
+            if not number.is_finite() or abs(number) >= Decimal(10) ** (precision - scale):
+                raise ValueError(f"{column['label']}はnumeric({precision},{scale})の範囲で入力してください")
+            return number
+        except InvalidOperation as exc:
+            raise ValueError(f"{column['label']}は数値で入力してください") from exc
+
+    if column.get("options") and text not in {str(item["value"]) for item in column["options"]}:
+        raise ValueError(f"{column['label']}は選択肢から指定してください")
 
     if column_type == "date":
         # PostgreSQLにも日付検証はあるが、API側で先に弾くと画面に分かりやすいエラーを返せる。
@@ -1028,13 +893,13 @@ def normalize_admin_payload(definition, payload, *, require_required_fields):
 
 def validate_admin_required_fields(definition, values, *, include_primary_key=True):
     """DDLのNOT NULLに対応する必須列が保存値に含まれていることを確認する。"""
-    primary_key = definition["primary_key"]
+    primary_keys = admin_primary_key_columns(definition)
     for column in definition["columns"]:
         if column.get("readonly") or not column.get("required"):
             continue
 
         name = column["name"]
-        if not include_primary_key and name == primary_key:
+        if not include_primary_key and name in primary_keys:
             continue
 
         if name not in values or values.get(name) in (None, ""):
@@ -1195,7 +1060,9 @@ def normalize_link_int(row, name, label, *, required=False):
             raise ValueError(f"{label}は必須です")
         return None
     try:
-        return int(str(value).strip())
+        return normalize_admin_value(
+            {"label": label, "type": "integer", "bits": 32 if name == "word_order" else 64}, value
+        )
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{label}は整数で入力してください") from exc
 
@@ -1208,7 +1075,12 @@ def reject_duplicate_link(keys, label, seen):
 
 def normalize_admin_star_culture_links(raw_links):
     """星文化リンク編集payloadをDDLに合わせて正規化する。"""
-    links = raw_links if isinstance(raw_links, dict) else {}
+    if not isinstance(raw_links, dict):
+        raise ValueError("リンク情報はJSONオブジェクトで送信してください")
+    links = raw_links
+    for key, rows in links.items():
+        if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+            raise ValueError(f"{key}のリンク情報は行オブジェクトの配列で送信してください")
     normalized = {
         "astro": [],
         "source": [],
@@ -1292,7 +1164,7 @@ def validate_admin_references(conn, references):
         definition = ADMIN_LOOKUP_TABLES[key]
         rows = query_rows(
             conn,
-            sql.SQL("SELECT {column} AS value FROM {table} WHERE {column} = ANY(%s)").format(
+            sql.SQL("SELECT {column} AS value FROM {table} WHERE {column} = ANY(%s) FOR KEY SHARE").format(
                 column=sql.Identifier(definition["value_column"]),
                 table=sql.Identifier(definition["table"]),
             ),
@@ -1322,27 +1194,12 @@ def replace_admin_star_culture_links(conn, star_culture_id, raw_links):
                 if key in row:
                     references.setdefault(key, set()).add(row[key])
     validate_admin_references(conn, references)
-    old_tradition_rows = query_rows(
-        conn,
-        "SELECT tradition_id FROM star_tradition_link WHERE star_culture_id = %s",
-        [star_culture_id],
-    )
-    affected_traditions = {row["tradition_id"] for row in old_tradition_rows}
-    affected_traditions.update(row["tradition_id"] for row in links["tradition"])
-    affected_traditions.update(row["tradition_id"] for row in links["tradition_source"])
 
     for table in ("star_astro_link", "star_source_link", "star_tradition_link", "star_area_link", "star_word_link"):
         execute_query(
             conn,
             sql.SQL("DELETE FROM {table} WHERE star_culture_id = %s").format(table=sql.Identifier(table)),
             [star_culture_id],
-        )
-
-    if affected_traditions:
-        execute_query(
-            conn,
-            "DELETE FROM tradition_source_link WHERE tradition_id = ANY(%s)",
-            [list(affected_traditions)],
         )
 
     for row in links["astro"]:
@@ -1378,6 +1235,8 @@ def replace_admin_star_culture_links(conn, star_culture_id, raw_links):
             """
             INSERT INTO tradition_source_link (tradition_id, source_id, page_info, memo)
             VALUES (%s, %s, %s, %s)
+            ON CONFLICT (tradition_id, source_id)
+            DO UPDATE SET page_info = EXCLUDED.page_info, memo = EXCLUDED.memo
             """,
             [row["tradition_id"], row["source_id"], row["page_info"], row["memo"]],
         )
@@ -1401,14 +1260,20 @@ def replace_admin_star_culture_links(conn, star_culture_id, raw_links):
         )
 
 
-def list_admin_table_rows(table_name, query_text="", limit=500, offset=0):
+def list_admin_table_rows(table_name, query_text="", limit=500, offset=0, sort_column=None, sort_direction="asc"):
     """編集対象テーブルの行を検索・ページング付きで取得する。"""
     definition = get_admin_table_definition(table_name)
     primary_key = definition["primary_key"]
     columns = admin_column_names(definition)
     fields_sql = sql.SQL(", ").join(sql.Identifier(column) for column in columns)
+    order_columns = get_admin_order_columns(definition)
+    if sort_column:
+        if sort_column not in columns or sort_direction not in {"asc", "desc"}:
+            raise ValueError("並べ替え列・順序の指定が不正です")
+        order_columns = list(dict.fromkeys([sort_column] + admin_primary_key_columns(definition)))
+    direction = sql.SQL("DESC" if sort_column and sort_direction == "desc" else "ASC")
     order_sql = sql.SQL(", ").join(
-        sql.Identifier(column) for column in get_admin_order_columns(definition)
+        sql.SQL("{} {} NULLS LAST").format(sql.Identifier(column), direction) for column in order_columns
     )
     where_sql, params = build_admin_where_search(definition, (query_text or "").strip())
 
@@ -1449,6 +1314,7 @@ def list_admin_table_rows(table_name, query_text="", limit=500, offset=0):
         "table": table_name,
         "label": definition["label"],
         "primaryKey": primary_key,
+        "primaryKeys": admin_primary_key_columns(definition),
         "columns": definition["columns"],
         "rows": [serialize_admin_row(row) for row in rows],
         "total": total,
@@ -1463,18 +1329,19 @@ def get_admin_table_row(table_name, primary_key_value):
     primary_key = definition["primary_key"]
     columns = admin_column_names(definition)
     fields_sql = sql.SQL(", ").join(sql.Identifier(column) for column in columns)
+    where_sql, key_params = admin_primary_key_where(definition, primary_key_value)
 
     with get_connection() as conn:
         rows = query_rows(
             conn,
             sql.SQL(
-                "SELECT {fields} FROM {table} WHERE {primary_key} = %s"
+                "SELECT {fields} FROM {table} WHERE {where}"
             ).format(
                 fields=fields_sql,
                 table=sql.Identifier(table_name),
-                primary_key=sql.Identifier(primary_key),
+                where=where_sql,
             ),
-            [primary_key_value],
+            key_params,
         )
         if not rows:
             return None
@@ -1523,6 +1390,7 @@ def update_admin_table_row(table_name, primary_key_value, payload, updated_by=No
     """主キーで指定した1行を更新する。主キー列自体の変更は許可しない。"""
     definition = get_admin_table_definition(table_name)
     primary_key = definition["primary_key"]
+    where_sql, key_params = admin_primary_key_where(definition, primary_key_value)
     values = normalize_admin_payload(definition, payload, require_required_fields=False)
     reject_admin_primary_key_change(definition, values, primary_key_value)
     validate_admin_required_fields(definition, values, include_primary_key=False)
@@ -1545,18 +1413,18 @@ def update_admin_table_row(table_name, primary_key_value, payload, updated_by=No
     if not assignments:
         raise ValueError("更新する値がありません")
 
-    params.append(primary_key_value)
+    params.extend(key_params)
 
     with get_connection() as conn:
         validate_admin_column_references(conn, definition, values)
         rows = query_rows(
             conn,
             sql.SQL(
-                "UPDATE {table} SET {assignments} WHERE {primary_key} = %s RETURNING {returning}"
+                "UPDATE {table} SET {assignments} WHERE {where} RETURNING {returning}"
             ).format(
                 table=sql.Identifier(table_name),
                 assignments=sql.SQL(", ").join(assignments),
-                primary_key=sql.Identifier(primary_key),
+                where=where_sql,
                 returning=sql.SQL(", ").join(sql.Identifier(column) for column in returning_columns),
             ),
             params,
@@ -1567,8 +1435,8 @@ def update_admin_table_row(table_name, primary_key_value, payload, updated_by=No
 
         row = serialize_admin_row(rows[0])
         if table_name == "star_culture" and isinstance(payload, dict) and "links" in payload:
-            replace_admin_star_culture_links(conn, primary_key_value, payload.get("links"))
-            row["links"] = get_admin_star_culture_links(conn, primary_key_value)
+            replace_admin_star_culture_links(conn, row[primary_key], payload.get("links"))
+            row["links"] = get_admin_star_culture_links(conn, row[primary_key])
         return row
 
 
@@ -1577,26 +1445,52 @@ def delete_admin_table_row(table_name, primary_key_value):
     definition = get_admin_table_definition(table_name)
     primary_key = definition["primary_key"]
     returning_columns = admin_column_names(definition)
+    where_sql, key_params = admin_primary_key_where(definition, primary_key_value)
+    owned_links = {"star_astro_link", "star_source_link", "star_tradition_link", "star_area_link", "star_word_link", "usage_status"}
 
     with get_connection() as conn:
+        existing = query_rows(
+            conn,
+            sql.SQL("SELECT {fields} FROM {table} WHERE {where} FOR UPDATE").format(
+                fields=sql.SQL(", ").join(sql.Identifier(column) for column in returning_columns),
+                table=sql.Identifier(table_name), where=where_sql,
+            ), key_params,
+        )
+        if not existing:
+            return None
+        for child_name, child_definition in ADMIN_TABLES.items():
+            if table_name == "star_culture" and child_name in owned_links:
+                continue
+            for column in child_definition["columns"]:
+                lookup = ADMIN_LOOKUP_TABLES.get(column.get("lookup"))
+                if not lookup or lookup["table"] != table_name:
+                    continue
+                references = query_rows(
+                    conn,
+                    sql.SQL("SELECT 1 FROM {table} WHERE {column} = %s LIMIT 1").format(
+                        table=sql.Identifier(child_name), column=sql.Identifier(column["name"]),
+                    ), [existing[0][lookup["value_column"]]],
+                )
+                if references:
+                    raise ValueError(f"{child_definition['label']}で参照されているため削除できません")
         if table_name == "star_culture":
-            for table in ("star_astro_link", "star_source_link", "star_tradition_link", "star_area_link", "star_word_link"):
+            for table in sorted(owned_links):
                 execute_query(
                     conn,
                     sql.SQL("DELETE FROM {table} WHERE star_culture_id = %s").format(table=sql.Identifier(table)),
-                    [primary_key_value],
+                    [existing[0][primary_key]],
                 )
 
         rows = query_rows(
             conn,
             sql.SQL(
-                "DELETE FROM {table} WHERE {primary_key} = %s RETURNING {returning}"
+                "DELETE FROM {table} WHERE {where} RETURNING {returning}"
             ).format(
                 table=sql.Identifier(table_name),
-                primary_key=sql.Identifier(primary_key),
+                where=where_sql,
                 returning=sql.SQL(", ").join(sql.Identifier(column) for column in returning_columns),
             ),
-            [primary_key_value],
+            key_params,
         )
 
     return serialize_admin_row(rows[0]) if rows else None

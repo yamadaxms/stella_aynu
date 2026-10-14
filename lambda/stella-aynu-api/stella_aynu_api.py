@@ -360,6 +360,8 @@ def handle_admin_request(event, method, path):
                     query_text=query.get("q", ""),
                     limit=query.get("limit", 500),
                     offset=query.get("offset", 0),
+                    sort_column=query.get("sort"),
+                    sort_direction=query.get("direction", "asc"),
                 ),
                 event,
             )

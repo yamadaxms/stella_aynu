@@ -62,17 +62,6 @@
       ],
     },
     {
-      key: "tradition_source",
-      label: "伝承出典リンク",
-      addLabel: "伝承出典を追加",
-      fields: [
-        { name: "tradition_id", label: "伝承タイトル", type: "select", lookup: "tradition_id", required: true },
-        { name: "source_id", label: "出典名", type: "select", lookup: "source_id", required: true },
-        { name: "page_info", label: "ページ情報", type: "text", maxLength: 32 },
-        { name: "memo", label: "メモ", type: "text" },
-      ],
-    },
-    {
       key: "area",
       label: "星文化地域リンク",
       addLabel: "地域を追加",
@@ -93,113 +82,10 @@
     },
   ];
 
-  const TABLES = [
-    {
-      name: "star_culture",
-      label: "星文化情報",
-      primaryKey: "star_culture_id",
-      defaultSort: "name_ja",
-      listColumns: ["name_ja", "name_en", "meaning", "culture_cd", "is_published"],
-      relatedLinks: STAR_CULTURE_LINKS,
-      columns: [
-        { name: "star_culture_id", label: "星文化ID", type: "integer", autoSequence: true },
-        { name: "name_ja", label: "名称", type: "text", required: true, maxLength: 64 },
-        { name: "name_en", label: "名称（英字）", type: "text", maxLength: 64 },
-        { name: "meaning", label: "意味", type: "text", maxLength: 128 },
-        { name: "original_name_ja", label: "オリジナル名称", type: "text", required: true, maxLength: 64 },
-        { name: "original_name_en", label: "オリジナル名称（英字）", type: "text", maxLength: 64 },
-        { name: "original_meaning", label: "オリジナル意味", type: "text", maxLength: 128 },
-        { name: "memo", label: "メモ", type: "textarea" },
-        { name: "culture_cd", label: "文化", type: "select", lookup: "culture_cd", required: true, maxLength: 1 },
-        { name: "is_published", label: "公開", type: "boolean", required: true, default: false },
-        { name: "created_at", label: "作成日時", type: "datetime", readonly: true },
-        { name: "updated_at", label: "更新日時", type: "datetime", readonly: true },
-      ],
-    },
-    {
-      name: "tradition_list",
-      label: "伝承リスト",
-      primaryKey: "tradition_id",
-      defaultSort: "tradition_title",
-      listColumns: ["tradition_title", "tradition_area", "is_published"],
-      columns: [
-        { name: "tradition_id", label: "伝承ID", type: "integer", autoSequence: true },
-        { name: "tradition_title", label: "伝承タイトル", type: "text", required: true, maxLength: 64 },
-        { name: "tradition_content", label: "伝承内容", type: "textarea" },
-        { name: "tradition_area", label: "伝承地域", type: "text", maxLength: 16 },
-        { name: "memo", label: "メモ", type: "textarea" },
-        { name: "is_published", label: "公開", type: "boolean", required: true, default: false },
-        { name: "created_at", label: "作成日時", type: "datetime", readonly: true },
-        { name: "updated_at", label: "更新日時", type: "datetime", readonly: true },
-      ],
-    },
-    {
-      name: "source_list",
-      label: "出典リスト",
-      primaryKey: "source_id",
-      defaultSort: "source_name",
-      listColumns: ["source_name", "source_cd", "author", "publication_date", "is_published"],
-      columns: [
-        { name: "source_id", label: "出典ID", type: "integer", autoSequence: true },
-        { name: "source_name", label: "出典名", type: "text", required: true, maxLength: 128 },
-        { name: "source_cd", label: "出典区分", type: "select", lookup: "source_cd", required: true, maxLength: 1 },
-        { name: "source_detail", label: "出典詳細", type: "textarea" },
-        { name: "detail_flg", label: "出典詳細公開", type: "boolean", required: true, default: false },
-        { name: "publisher", label: "出版社", type: "text", maxLength: 32 },
-        { name: "author", label: "著者/採取者", type: "text", maxLength: 128 },
-        { name: "publication_date", label: "発行/採集年月日", type: "text", maxLength: 32 },
-        { name: "publication_area", label: "採集地域", type: "text", maxLength: 16 },
-        { name: "url", label: "URL", type: "url", maxLength: 2048 },
-        { name: "memo", label: "メモ", type: "textarea" },
-        { name: "is_published", label: "公開", type: "boolean", required: true, default: false },
-        { name: "created_at", label: "作成日時", type: "datetime", readonly: true },
-        { name: "updated_at", label: "更新日時", type: "datetime", readonly: true },
-      ],
-    },
-    {
-      name: "area_list",
-      label: "地域リスト",
-      primaryKey: "area_id",
-      defaultSort: "area_name",
-      listColumns: ["area_name", "memo"],
-      columns: [
-        { name: "area_id", label: "地域ID", type: "integer", autoSequence: true },
-        { name: "area_name", label: "地域名称", type: "text", required: true, maxLength: 32 },
-        { name: "memo", label: "メモ", type: "textarea" },
-      ],
-    },
-    {
-      name: "astro_master",
-      label: "天体マスタ",
-      primaryKey: "astro_id",
-      defaultSort: "astro_cd",
-      listColumns: ["astro_name", "astro_cd", "constellation", "memo"],
-      columns: [
-        { name: "astro_id", label: "天体ID", type: "integer", autoSequence: true },
-        { name: "astro_name", label: "天体名称", type: "text", required: true, maxLength: 32 },
-        { name: "astro_cd", label: "天体区分", type: "select", lookup: "astro_cd", required: true, maxLength: 1 },
-        { name: "constellation", label: "星座", type: "text", nullable: true, maxLength: 16 },
-        { name: "memo", label: "メモ", type: "textarea" },
-      ],
-    },
-    {
-      name: "word_master",
-      label: "単語マスタ",
-      primaryKey: "word_id",
-      defaultSort: "word_ja",
-      listColumns: ["word_ja", "word_en", "word_meaning", "memo"],
-      columns: [
-        { name: "word_id", label: "単語ID", type: "integer", autoSequence: true },
-        { name: "word_ja", label: "単語", type: "text", required: true, maxLength: 32 },
-        { name: "word_en", label: "単語（英字）", type: "text", maxLength: 64 },
-        { name: "word_meaning", label: "意味", type: "textarea" },
-        { name: "memo", label: "メモ", type: "textarea" },
-      ],
-    },
-  ];
+  const TABLES = [];
 
   const state = {
-    tableName: TABLES[0].name,
+    tableName: "star_culture",
     rows: [],
     selectedPrimaryKey: null,
     originalPrimaryKey: null,
@@ -208,8 +94,17 @@
     lookups: {},
     relatedLinks: {},
     loading: false,
+    metadataReady: false,
+    detailLoading: false,
+    linksLoaded: false,
+    editorRequestId: 0,
+    saving: false,
+    originalRow: null,
+    offset: 0,
+    total: 0,
+    pageSize: 500,
     loadRequestId: 0,
-    sortColumn: TABLES[0].defaultSort,
+    sortColumn: "name_ja",
     sortDirection: "asc",
     isDefaultSort: true,
     rdsStatus: "unknown",
@@ -229,6 +124,52 @@
 
   function getColumnDefinition(table, name) {
     return table.columns.find((column) => column.name === name);
+  }
+
+  function getPrimaryKeyColumns(table = getTableDefinition()) {
+    return table.primaryKeys || [table.primaryKey];
+  }
+
+  function getRowKey(table, row) {
+    const keys = getPrimaryKeyColumns(table);
+    if (!row || keys.some((key) => row[key] === null || row[key] === undefined)) return null;
+    if (keys.length === 1) return String(row[keys[0]]);
+    return JSON.stringify(Object.fromEntries(keys.map((key) => [key, String(row[key])])));
+  }
+
+  function updateEditorControls() {
+    const canSave = state.metadataReady && state.mode !== "idle" && state.linksLoaded && !state.detailLoading && !state.saving && state.rdsStatus === "available";
+    els.saveButton.disabled = !canSave;
+    els.deleteButton.disabled = !DELETE_ENABLED || !canSave || state.mode !== "edit";
+    els.cancelButton.disabled = state.mode === "idle" || state.saving;
+    els.editorFields.inert = state.detailLoading || state.saving;
+    els.tableNav.inert = state.saving;
+    els.dataHead.inert = state.saving;
+    els.dataBody.inert = state.saving;
+    els.newRowButton.disabled = state.loading || state.saving || !state.metadataReady;
+    els.previousPageButton.disabled = state.loading || state.saving || state.offset === 0;
+    els.nextPageButton.disabled = state.loading || state.saving || state.offset + state.rows.length >= state.total;
+  }
+
+  async function loadTableDefinitions() {
+    state.metadataReady = false;
+    els.newRowButton.disabled = true;
+    const data = await apiRequest(buildAdminUrl(""));
+    if (!Array.isArray(data?.tables) || !data.tables.length) throw new Error("編集対象テーブルの定義を取得できませんでした。");
+    const definitions = data.tables.map((table) => ({
+      ...table,
+      primaryKeys: table.primaryKeys || [table.primaryKey],
+      columns: table.columns.map((column) => ({ ...column, maxLength: column.max_length, autoSequence: column.auto_sequence })),
+      listColumns: table.listColumns || table.columns.filter((column) => !column.readonly).slice(0, 6).map((column) => column.name),
+      defaultSort: table.defaultSort || table.primaryKey,
+      relatedLinks: table.name === "star_culture" ? STAR_CULTURE_LINKS : undefined,
+    }));
+    TABLES.splice(0, TABLES.length, ...definitions);
+    if (!TABLES.some((table) => table.name === state.tableName)) state.tableName = TABLES[0].name;
+    state.sortColumn = getTableDefinition().defaultSort;
+    state.metadataReady = true;
+    clearEditor();
+    renderTableNav();
   }
 
   function createEmptyRelatedLinks(table = getTableDefinition()) {
@@ -742,6 +683,15 @@
 
     startHeartbeat();
 
+    try {
+      await loadTableDefinitions();
+    } catch (err) {
+      state.metadataReady = false;
+      updateEditorControls();
+      setStatus(err.message || String(err));
+      return;
+    }
+
     let lookupError = null;
     try {
       await loadLookupOptions();
@@ -768,6 +718,7 @@
         if (state.tableName === table.name) return;
         state.tableName = table.name;
         state.query = "";
+        state.offset = 0;
         state.sortColumn = table.defaultSort || table.listColumns[0] || table.primaryKey;
         state.sortDirection = "asc";
         state.isDefaultSort = true;
@@ -813,7 +764,7 @@
     if (column?.type === "datetime") return formatDateTime(value);
     if (column?.type === "select") {
       const option = findLookupOption(column, value);
-      if (option) return `${option.value}: ${option.label}`;
+      if (option) return formatLookupOption(option);
     }
     if (value === null || value === undefined || value === "") return "-";
     return String(value);
@@ -823,8 +774,12 @@
     return column.lookup || column.name;
   }
 
+  function formatLookupOption(option) {
+    return String(option.value) === String(option.label) ? String(option.label) : `${option.value}: ${option.label}`;
+  }
+
   function getLookupOptions(column) {
-    return state.lookups[getLookupKey(column)] || [];
+    return column.options || state.lookups[getLookupKey(column)] || [];
   }
 
   function findLookupOption(column, value) {
@@ -874,7 +829,7 @@
 
     let result = 0;
     if (!aEmpty) {
-      if (column?.type === "integer") {
+      if (column?.type === "integer" || column?.type === "number") {
         result = Number(aValue) - Number(bValue);
       } else if (column?.type === "boolean") {
         result = Number(Boolean(aValue)) - Number(Boolean(bValue));
@@ -884,11 +839,12 @@
     }
 
     if (result !== 0) return state.sortDirection === "desc" ? -result : result;
-    return LIST_SORT_COLLATOR.compare(String(a?.[table.primaryKey] ?? ""), String(b?.[table.primaryKey] ?? ""));
+    return LIST_SORT_COLLATOR.compare(getRowKey(table, a) || "", getRowKey(table, b) || "");
   }
 
   function renderRows() {
     const table = getTableDefinition();
+    if (!table) return;
     const columns = table.listColumns.map((name) => getColumnDefinition(table, name)).filter(Boolean);
 
     els.dataHead.textContent = "";
@@ -912,7 +868,8 @@
           state.sortColumn = column.name;
           state.sortDirection = "asc";
         }
-        renderRows();
+        state.offset = 0;
+        loadRows();
       });
       th.appendChild(button);
       headRow.appendChild(th);
@@ -923,7 +880,7 @@
     const sortedRows = state.rows.slice().sort((a, b) => compareListRows(table, a, b));
     sortedRows.forEach((row) => {
       const rowEl = document.createElement("tr");
-      const pk = row[table.primaryKey];
+      const pk = getRowKey(table, row);
       rowEl.tabIndex = 0;
       rowEl.dataset.pk = pk ?? "";
       if (String(pk) === String(state.selectedPrimaryKey)) {
@@ -941,18 +898,22 @@
     });
 
     els.emptyMessage.hidden = state.rows.length > 0;
-    els.rowCount.textContent = `${state.rows.length}件表示`;
+    els.rowCount.textContent = state.total ? `${state.offset + 1}〜${state.offset + state.rows.length}件 / ${state.total}件` : "0件";
+    els.previousPageButton.disabled = state.loading || state.saving || state.offset === 0;
+    els.nextPageButton.disabled = state.loading || state.saving || state.offset + state.rows.length >= state.total;
   }
 
   function setLoading(isLoading) {
     state.loading = isLoading;
     els.listLoading.hidden = !isLoading;
     els.reloadButton.disabled = isLoading;
-    els.newRowButton.disabled = isLoading;
+    els.newRowButton.disabled = isLoading || state.saving || !state.metadataReady;
+    els.previousPageButton.disabled = isLoading || state.saving || state.offset === 0;
+    els.nextPageButton.disabled = isLoading || state.saving || state.offset + state.rows.length >= state.total;
   }
 
   async function loadRows() {
-    if (state.rdsStatus !== "available") return;
+    if (state.rdsStatus !== "available" || !state.metadataReady) return;
 
     const table = getTableDefinition();
     const requestId = state.loadRequestId + 1;
@@ -965,16 +926,19 @@
       const data = await apiRequest(
         buildAdminUrl(table.name, {
           q: state.query,
-          limit: 500,
-          offset: 0,
+          limit: state.pageSize,
+          offset: state.offset,
+          sort: state.sortColumn,
+          direction: state.sortDirection,
         }),
       );
       if (requestId !== state.loadRequestId) return;
       state.rows = (Array.isArray(data.rows) ? data.rows : []).slice();
+      state.total = Number(data.total) || 0;
       renderRows();
 
       if (state.selectedPrimaryKey !== null) {
-        const selected = state.rows.find((row) => String(row[table.primaryKey]) === String(state.selectedPrimaryKey));
+        const selected = state.rows.find((row) => getRowKey(table, row) === state.selectedPrimaryKey);
         if (selected) {
           await selectRow(selected, { skipRenderRows: true });
         } else {
@@ -984,6 +948,7 @@
     } catch (err) {
       if (requestId !== state.loadRequestId) return;
       state.rows = [];
+      state.total = 0;
       renderRows();
       setStatus(err.message || String(err));
     } finally {
@@ -992,22 +957,27 @@
   }
 
   function clearEditor() {
+    state.editorRequestId += 1;
     state.selectedPrimaryKey = null;
     state.originalPrimaryKey = null;
     state.mode = "idle";
     state.relatedLinks = {};
+    state.originalRow = null;
+    state.linksLoaded = false;
+    state.detailLoading = false;
     els.editorMode.textContent = "未選択";
     els.editorFields.textContent = "";
     els.saveButton.disabled = true;
     els.deleteButton.disabled = true;
     els.cancelButton.disabled = true;
     renderRows();
+    updateEditorControls();
   }
 
   function createField(column, value) {
     const wrapper = document.createElement("div");
     wrapper.className = "editor-field";
-    const isPrimaryKeyInEdit = column.name === getTableDefinition().primaryKey && state.mode === "edit";
+    const isPrimaryKeyInEdit = getPrimaryKeyColumns().includes(column.name) && state.mode === "edit";
 
     const label = document.createElement("label");
     label.className = "field-label";
@@ -1054,7 +1024,7 @@
       options.forEach((option) => {
         const optionEl = document.createElement("option");
         optionEl.value = option.value;
-        optionEl.textContent = `${option.value}: ${option.label}`;
+        optionEl.textContent = formatLookupOption(option);
         optionEl.selected = String(option.value) === currentValue;
         select.appendChild(optionEl);
       });
@@ -1084,8 +1054,9 @@
     if (column.maxLength) input.maxLength = column.maxLength;
 
     if (input.tagName === "INPUT") {
-      input.type = column.type === "date" ? "date" : column.type === "url" ? "url" : column.type === "integer" ? "number" : "text";
+      input.type = column.type === "date" ? "date" : column.type === "url" ? "url" : ["integer", "number"].includes(column.type) ? "number" : "text";
       if (column.type === "integer") input.step = "1";
+      if (column.type === "number") input.step = column.step || "any";
     }
 
     input.value = value ?? "";
@@ -1099,8 +1070,8 @@
     const row = {};
     table.columns.forEach((column) => {
       if (column.readonly) return;
-      if (state.mode === "edit" && column.name === table.primaryKey) {
-        row[column.name] = state.originalPrimaryKey;
+      if (state.mode === "edit" && getPrimaryKeyColumns(table).includes(column.name)) {
+        row[column.name] = state.originalRow?.[column.name];
         return;
       }
       const input = els.editorForm.elements[column.name];
@@ -1140,7 +1111,7 @@
       getLookupOptions(field).forEach((option) => {
         const optionEl = document.createElement("option");
         optionEl.value = option.value;
-        optionEl.textContent = option.value === option.label ? option.label : `${option.value}: ${option.label}`;
+        optionEl.textContent = formatLookupOption(option);
         optionEl.selected = String(option.value) === String(currentValue);
         input.appendChild(optionEl);
       });
@@ -1236,23 +1207,26 @@
     const table = getTableDefinition();
     els.editorFields.textContent = "";
     table.columns.forEach((column) => {
-      if (state.mode === "create" && column.autoSequence) return;
+      if (state.mode === "create" && (column.autoSequence || column.readonly)) return;
       els.editorFields.appendChild(createField(column, row[column.name]));
     });
     renderRelatedEditor(table);
 
-    els.editorMode.textContent = state.mode === "create" ? "新規追加" : "編集中";
-    els.saveButton.disabled = false;
-    els.deleteButton.disabled = !DELETE_ENABLED || state.mode !== "edit";
-    els.cancelButton.disabled = false;
+    els.editorMode.textContent = state.mode === "create" ? "新規追加" : state.detailLoading ? "詳細を読み込み中" : "編集中";
+    updateEditorControls();
   }
 
   function startCreate() {
+    if (!state.metadataReady || state.saving) return;
     const table = getTableDefinition();
+    state.editorRequestId += 1;
     state.mode = "create";
     state.selectedPrimaryKey = null;
     state.originalPrimaryKey = null;
     state.relatedLinks = createEmptyRelatedLinks(table);
+    state.originalRow = null;
+    state.detailLoading = false;
+    state.linksLoaded = true;
     const row = {};
     table.columns.forEach((column) => {
       if (column.default !== undefined) row[column.name] = column.default;
@@ -1262,12 +1236,17 @@
   }
 
   async function selectRow(row, { skipRenderRows = false } = {}) {
+    if (state.saving && !skipRenderRows) return;
     const table = getTableDefinition();
-    const pk = row[table.primaryKey];
+    const pk = getRowKey(table, row);
+    const requestId = ++state.editorRequestId;
     state.mode = "edit";
     state.selectedPrimaryKey = pk;
     state.originalPrimaryKey = pk;
     state.relatedLinks = normalizeRelatedLinks(table, row.links);
+    state.originalRow = { ...row };
+    state.linksLoaded = !table.relatedLinks;
+    state.detailLoading = Boolean(table.relatedLinks);
     renderEditor(row);
     if (!skipRenderRows) renderRows();
 
@@ -1275,12 +1254,25 @@
 
     try {
       const data = await apiRequest(buildAdminUrl(table.name, { pk }));
-      if (state.tableName !== table.name || String(state.originalPrimaryKey) !== String(pk)) return;
-      const detailRow = data.row || row;
+      if (requestId !== state.editorRequestId) return;
+      if (!data.row || !table.relatedLinks.every((config) => Array.isArray(data.row.links?.[config.key]))) {
+        throw new Error("関連情報を取得できませんでした。行を選択し直してください。");
+      }
+      const detailRow = data.row;
       state.relatedLinks = normalizeRelatedLinks(table, detailRow.links);
+      state.originalRow = { ...detailRow };
+      state.linksLoaded = true;
+      state.detailLoading = false;
       renderEditor(detailRow);
     } catch (err) {
+      if (requestId !== state.editorRequestId) return;
       setStatus(err.message || String(err));
+    } finally {
+      if (requestId === state.editorRequestId) {
+        state.detailLoading = false;
+        els.editorMode.textContent = state.linksLoaded ? "編集中" : "詳細取得に失敗";
+        updateEditorControls();
+      }
     }
   }
 
@@ -1290,7 +1282,7 @@
     table.columns.forEach((column) => {
       if (column.readonly) return;
       if (state.mode === "create" && column.autoSequence) return;
-      if (state.mode === "edit" && column.name === table.primaryKey) return;
+      if (state.mode === "edit" && getPrimaryKeyColumns(table).includes(column.name)) return;
       const input = els.editorForm.elements[column.name];
       if (!input) return;
       data[column.name] = column.type === "boolean" ? input.checked : normalizeFormValue(column, input.value);
@@ -1318,13 +1310,15 @@
   async function saveForm(event) {
     event.preventDefault();
     if (state.mode !== "create" && state.mode !== "edit") return;
+    if (els.saveButton.disabled || state.saving || !state.linksLoaded || !els.editorForm.reportValidity()) return;
 
     const table = getTableDefinition();
     const data = collectFormData();
     const isCreate = state.mode === "create";
 
     setStatus("");
-    els.saveButton.disabled = true;
+    state.saving = true;
+    updateEditorControls();
 
     try {
       const result = isCreate
@@ -1338,8 +1332,9 @@
           });
 
       const savedRow = result.row;
-      state.selectedPrimaryKey = savedRow?.[table.primaryKey] ?? data[table.primaryKey] ?? null;
+      state.selectedPrimaryKey = getRowKey(table, savedRow);
       state.originalPrimaryKey = state.selectedPrimaryKey;
+      state.originalRow = savedRow;
       state.mode = "edit";
       await loadLookupOptions();
       await loadRows();
@@ -1347,7 +1342,8 @@
     } catch (err) {
       setStatus(err.message || String(err));
     } finally {
-      els.saveButton.disabled = false;
+      state.saving = false;
+      updateEditorControls();
     }
   }
 
@@ -1406,6 +1402,7 @@
     const nextQuery = els.searchInput.value.trim();
     if (state.query === nextQuery) return;
     state.query = nextQuery;
+    state.offset = 0;
     clearEditor();
     loadRows();
   }
@@ -1437,6 +1434,8 @@
       searchInput: document.getElementById("search-input"),
       clearSearchButton: document.getElementById("clear-search-button"),
       rowCount: document.getElementById("row-count"),
+      previousPageButton: document.getElementById("previous-page-button"),
+      nextPageButton: document.getElementById("next-page-button"),
       listLoading: document.getElementById("list-loading"),
       statusMessage: document.getElementById("status-message"),
       dataHead: document.getElementById("data-head"),
@@ -1459,6 +1458,18 @@
     els.exportJsonButton.addEventListener("click", exportPublicJson);
     els.newRowButton.addEventListener("click", startCreate);
     els.reloadButton.addEventListener("click", loadRows);
+    els.previousPageButton.addEventListener("click", () => {
+      if (state.loading || state.saving || !state.offset) return;
+      state.offset = Math.max(0, state.offset - state.pageSize);
+      clearEditor();
+      loadRows();
+    });
+    els.nextPageButton.addEventListener("click", () => {
+      if (state.loading || state.saving || state.offset + state.rows.length >= state.total) return;
+      state.offset += state.pageSize;
+      clearEditor();
+      loadRows();
+    });
     els.editorForm.addEventListener("submit", saveForm);
     els.deleteButton.addEventListener("click", deleteCurrentRow);
     els.cancelButton.addEventListener("click", clearEditor);
@@ -1479,6 +1490,7 @@
       }
       els.searchInput.value = "";
       state.query = "";
+      state.offset = 0;
       clearEditor();
       loadRows();
       els.searchInput.focus();
