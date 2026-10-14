@@ -66,7 +66,7 @@ const AppState = {
   DEFAULT_VIEW_ROTATE: [0, 0, 0],
   VIEW_RESET_TOKEN: 0,
   CELESTIAL_RESIZE_TIMER: null,
-  STAR_CULTURE_MODAL_PREVIOUS_FOCUS: null,
+  STAR_CULTURE_MODAL: null,
 };
 
 // ============================================================
@@ -260,6 +260,11 @@ window.addEventListener("DOMContentLoaded", () => {
   if (constChk) {
     constChk.addEventListener("change", (e) => {
       const show = e.target.checked;
+      Object.assign(CELESTIAL_CONFIG.constellations, {
+        show: show,
+        names: show,
+        lines: show,
+      });
       Celestial.apply({
         constellations: { show: show, names: show, lines: show },
       });
@@ -768,41 +773,6 @@ function getStarCultureDataKey(item) {
   return String(key ?? "").trim();
 }
 
-function getStarCultureDisplayName(item) {
-  return String(item?.name_ja ?? item?.name ?? item?.star_culture?.name_ja ?? item?.star_culture?.name ?? item?.starCulture?.name_ja ?? item?.starCulture?.name ?? "").trim();
-}
-
-function getStarCulturePublishValue(item) {
-  return item?.is_published ?? item?.star_culture?.is_published ?? item?.starCulture?.is_published;
-}
-
-function hasStarCulturePublishValue(item) {
-  return getStarCulturePublishValue(item) !== undefined && getStarCulturePublishValue(item) !== null;
-}
-
-function isStarCulturePublished(item, hasPublishFlag) {
-  if (!hasPublishFlag && !hasStarCulturePublishValue(item)) return true;
-
-  const value = getStarCulturePublishValue(item);
-  if (value === true || value === 1) return true;
-  if (typeof value === "string") {
-    return ["true", "t", "1"].includes(value.trim().toLowerCase());
-  }
-  return false;
-}
-
-function findStarCultureDetailItem(key) {
-  const constellations = Array.isArray(AppState.AYNU_DATA?.constellations) ? AppState.AYNU_DATA.constellations : [];
-  if (typeof window.StarCultureDetail?.findPublishedByKey === "function") {
-    return window.StarCultureDetail.findPublishedByKey(constellations, key);
-  }
-
-  const targetKey = String(key ?? "").trim();
-  if (!targetKey) return null;
-  const hasPublishFlag = constellations.some(hasStarCulturePublishValue);
-  return constellations.find((entry) => getStarCultureDataKey(entry) === targetKey && isStarCulturePublished(entry, hasPublishFlag)) || null;
-}
-
 function getAynuFeatureCultureEntries(feature) {
   const entries = feature?.properties?.cultureEntries;
   if (!Array.isArray(entries)) return [];
@@ -820,103 +790,15 @@ function getAynuFeatureCultureEntries(feature) {
     });
 }
 
-function setStarCultureModalStatus(message) {
-  const status = document.getElementById("star-culture-status");
-  const detail = document.getElementById("star-culture-detail");
-  if (status) {
-    status.textContent = message;
-    status.hidden = !message;
-  }
-  if (detail) detail.hidden = !!message;
-}
-
-function getStarCultureModalFocusableElements(modal) {
-  if (!modal) return [];
-  const selector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-  return Array.from(modal.querySelectorAll(selector)).filter((el) => !el.hidden && el.offsetParent !== null);
-}
-
-function trapStarCultureModalFocus(event) {
-  if (event.key !== "Tab") return;
-
-  const modal = document.getElementById("star-culture-detail-modal");
-  if (!modal || modal.hidden) return;
-
-  const focusable = getStarCultureModalFocusableElements(modal);
-  if (!focusable.length) return;
-
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault();
-    first.focus();
-  }
-}
-
 function setupStarCultureDetailModal() {
-  const modal = document.getElementById("star-culture-detail-modal");
-  if (!modal || modal.dataset.bound === "1") return;
-  modal.dataset.bound = "1";
-
-  modal.addEventListener("click", (event) => {
-    if (event.target?.closest?.("[data-star-culture-modal-close]")) {
-      closeStarCultureDetailModal();
-    }
-  });
-  modal.addEventListener("keydown", trapStarCultureModalFocus);
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !modal.hidden) closeStarCultureDetailModal();
+  if (AppState.STAR_CULTURE_MODAL) return;
+  AppState.STAR_CULTURE_MODAL = window.StarCultureDetail.createModal({
+    findItem: (key) => window.StarCultureDetail.findPublishedByKey(AppState.AYNU_DATA?.constellations, key),
   });
 }
 
 function openStarCultureDetailModal(key, trigger = null) {
-  const modal = document.getElementById("star-culture-detail-modal");
-  if (!modal) return;
-
-  AppState.STAR_CULTURE_MODAL_PREVIOUS_FOCUS = trigger || document.activeElement;
-  modal.hidden = false;
-  document.body.classList.add("star-culture-modal-open");
-  setStarCultureModalStatus("");
-  const detail = document.getElementById("star-culture-detail");
-  if (detail) detail.hidden = true;
-
-  const title = document.getElementById("star-culture-modal-title");
-  if (title) title.textContent = "星文化詳細";
-
-  const item = findStarCultureDetailItem(key);
-  if (!item) {
-    setStarCultureModalStatus("該当する星文化情報が見つかりませんでした。");
-    modal.querySelector("[data-star-culture-modal-close]")?.focus();
-    return;
-  }
-
-  const rendered = typeof window.StarCultureDetail?.render === "function" && window.StarCultureDetail.render(modal, item);
-  if (!rendered) {
-    setStarCultureModalStatus("詳細表示の初期化に失敗しました。");
-    modal.querySelector("[data-star-culture-modal-close]")?.focus();
-    return;
-  }
-
-  const name = getStarCultureDisplayName(item);
-  if (title) title.textContent = name ? `星文化詳細：${name}` : "星文化詳細";
-  modal.querySelector("[data-star-culture-modal-close]")?.focus();
-}
-
-function closeStarCultureDetailModal() {
-  const modal = document.getElementById("star-culture-detail-modal");
-  if (!modal || modal.hidden) return;
-
-  modal.hidden = true;
-  document.body.classList.remove("star-culture-modal-open");
-  setStarCultureModalStatus("");
-
-  const previousFocus = AppState.STAR_CULTURE_MODAL_PREVIOUS_FOCUS;
-  AppState.STAR_CULTURE_MODAL_PREVIOUS_FOCUS = null;
-  if (previousFocus?.focus && document.contains(previousFocus)) previousFocus.focus();
+  AppState.STAR_CULTURE_MODAL?.open(key, trigger);
 }
 
 let AYNU_LIST_VIEWPORT_SYNC_RAF = 0;

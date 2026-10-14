@@ -379,6 +379,77 @@
     return constellations.find((entry) => String(getCultureKey(entry)) === targetKey && isPublished(entry, hasPublishFlag)) || null;
   }
 
+  // 星図ビューとデータベース一覧で、開閉・フォーカス・詳細描画を共用する。
+  function createModal({ findItem, root = getElement("star-culture-detail-modal") }) {
+    if (!root) return null;
+
+    const targetEls = collectElements(root);
+    const status = queryById(root, "star-culture-modal-status");
+    const title = queryById(root, "star-culture-modal-title");
+    const closeButton = root.querySelector("[data-star-culture-modal-close].star-culture-modal-close");
+    let previousFocus = null;
+
+    function setStatus(message) {
+      if (status) {
+        status.textContent = message;
+        status.hidden = !message;
+      }
+      if (message) setHidden(targetEls.detail, true);
+    }
+
+    function close() {
+      if (root.hidden) return;
+      root.hidden = true;
+      document.body.classList.remove("star-culture-modal-open");
+      setStatus("");
+      if (previousFocus?.focus && document.contains(previousFocus)) previousFocus.focus();
+      previousFocus = null;
+    }
+
+    function open(key, trigger = null) {
+      if (root.hidden) previousFocus = trigger || document.activeElement;
+      root.hidden = false;
+      document.body.classList.add("star-culture-modal-open");
+      setStatus("");
+      setHidden(targetEls.detail, true);
+      if (title) title.textContent = "星文化詳細";
+
+      const item = findItem(key);
+      if (!item) {
+        setStatus("該当する星文化情報が見つかりませんでした。");
+      } else if (!renderDetailInto(root, item)) {
+        setStatus("詳細表示の初期化に失敗しました。");
+      } else if (title) {
+        const name = String(getField(item, "name_ja") || getField(item, "name")).trim();
+        title.textContent = name ? `星文化詳細：${name}` : "星文化詳細";
+      }
+      closeButton?.focus();
+    }
+
+    root.addEventListener("click", (event) => {
+      if (event.target?.closest?.("[data-star-culture-modal-close]")) close();
+    });
+    root.addEventListener("keydown", (event) => {
+      if (event.key !== "Tab" || root.hidden) return;
+      const selector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+      const focusable = Array.from(root.querySelectorAll(selector)).filter((el) => !el.hidden && el.offsetParent !== null);
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (first && event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (last && !event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !root.hidden) close();
+    });
+
+    return { open, close };
+  }
+
   function getRequestedKey() {
     const params = new URLSearchParams(window.location.search);
     return String(params.get("key") || "").trim();
@@ -427,6 +498,7 @@
 
   window.StarCultureDetail = {
     render: renderDetailInto,
+    createModal,
     findPublishedByKey,
     getCultureKey,
     hasPublishValue,

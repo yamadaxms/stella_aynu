@@ -12,6 +12,7 @@
   };
 
   const els = {};
+  let detailModal = null;
   const LIST_SORT_COLLATOR = new Intl.Collator("ja", {
     numeric: true,
     sensitivity: "base",
@@ -388,11 +389,14 @@
       return td;
     }
 
-    const link = document.createElement("a");
-    link.className = "star-culture-action-link";
-    link.href = `detail.html?key=${encodeURIComponent(key)}`;
-    link.textContent = "詳細";
-    td.appendChild(link);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "star-culture-action-link";
+    button.dataset.starCultureKey = key;
+    button.setAttribute("aria-haspopup", "dialog");
+    button.setAttribute("aria-controls", "star-culture-detail-modal");
+    button.textContent = "詳細";
+    td.appendChild(button);
     return td;
   }
 
@@ -521,6 +525,11 @@
   }
 
   function bindEvents() {
+    els.results?.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-star-culture-key]");
+      if (button) detailModal?.open(button.dataset.starCultureKey, button);
+    });
+
     els.tableHead?.addEventListener("click", (event) => {
       const button = event.target.closest("button");
       const th = button?.closest("th[data-sort-column]");
@@ -642,6 +651,9 @@
     els.status = getElement("star-culture-status");
     els.resultCount = getElement("star-culture-result-count");
 
+    detailModal = window.StarCultureDetail.createModal({
+      findItem: (key) => window.StarCultureDetail.findPublishedByKey(state.constellations, key),
+    });
     bindEvents();
     applyInitialFiltersFromUrl();
     loadData();
