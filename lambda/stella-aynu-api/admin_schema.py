@@ -1,4 +1,4 @@
-"""Admin schema snapshot matching tmp/ddl_v2.sql (2026-10-14).
+"""Admin schema snapshot matching tmp/ddl_v2.sql and migrations/ (2026-10-25).
 
 Only the six content tables are published to the editor. The full schema is
 retained for reference checks. Generated IDs use tmp/sequences_v2.sql.
@@ -17,11 +17,11 @@ SCHEMA_TABLES = {
             {'name': 'star_culture_id', 'label': '星文化ID', 'type': 'integer', 'bits': 64, 'required': False, 'auto_sequence': True},
             {'name': 'name_ja', 'label': '名称', 'type': 'text', 'max_length': 64, 'required': True},
             {'name': 'name_en', 'label': '名称（英字）', 'type': 'text', 'max_length': 64},
-            {'name': 'meaning', 'label': '意味', 'type': 'text', 'max_length': 128},
+            {'name': 'meaning', 'label': '意味', 'type': 'textarea'},
             {'name': 'constellation_key', 'label': '星座キー', 'type': 'select', 'max_length': 32, 'lookup': 'constellation_key'},
             {'name': 'original_name_ja', 'label': 'オリジナル名称', 'type': 'text', 'max_length': 64, 'required': True},
             {'name': 'original_name_en', 'label': 'オリジナル名称（英字）', 'type': 'text', 'max_length': 64},
-            {'name': 'original_meaning', 'label': 'オリジナル意味', 'type': 'text', 'max_length': 128},
+            {'name': 'original_meaning', 'label': 'オリジナル意味', 'type': 'textarea'},
             {'name': 'memo', 'label': 'メモ', 'type': 'textarea'},
             {'name': 'culture_cd', 'label': '文化コード', 'type': 'select', 'max_length': 1, 'required': True, 'lookup': 'culture_cd'},
             {'name': 'is_published', 'label': '公開フラグ', 'type': 'boolean', 'default': False, 'required': True},
