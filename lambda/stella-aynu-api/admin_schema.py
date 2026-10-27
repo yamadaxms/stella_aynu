@@ -423,6 +423,7 @@ for table in ADMIN_TABLES.values():
             column['hidden'] = True
         elif column['name'] == 'constellation_key':
             column['label'] = '星図の名称'
+            column['hidden'] = True
         elif column['name'] == 'culture_cd':
             column['label'] = '文化'
         elif column['name'] == 'astro_cd':
