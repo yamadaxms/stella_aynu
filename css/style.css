@@ -109,6 +109,10 @@ body::after {
   font-size: 1.3rem; /* タイトルの文字サイズ */
 }
 
+.site-header .app-version {
+  font-size: 0.8em; /* バージョン表記はタイトルより少し小さくする */
+}
+
 .subtitle {
   margin: 0.2rem 0 0; /* タイトルとの隙間を調整 */
   font-size: 0.85rem; /* サブタイトルの文字サイズ */
