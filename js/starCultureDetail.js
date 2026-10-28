@@ -286,13 +286,6 @@
       { label: "意味", value: getField(item, "meaning") || getField(item, "description") },
       { label: "オリジナル意味", value: getField(item, "original_meaning") },
     );
-    const culture = getField(item, "culture_name") || getField(item, "culture_cd");
-    if (culture) {
-      const tr = document.createElement("tr");
-      appendBasicCell(tr, "文化", culture);
-      tr.lastElementChild.colSpan = 3;
-      targetEls.basic.appendChild(tr);
-    }
   }
 
   function renderRelated(targetEls, item) {
