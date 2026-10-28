@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/d3-celestial@0.7.35/celestial.css" />
     <!-- content-wrapper/content-card と参考文献ページの配色・余白を定義するCSS -->
     <link rel="stylesheet" href="css/style.css?v=v071" />
+    <!-- 問い合わせ先はHTMLに直接記載せず、JavaScriptで復元して通常の文字列として表示する -->
+    <script src="js/contact.js?v=v071" defer></script>
   </head>
   <body>
     <!-- js/includes.js が共通ヘッダーと現在ページのナビ強調へ差し替える -->
@@ -170,7 +172,7 @@
           <li>D3-Celestial 0.7.35 <code>constellations.json</code>・<code>constellations.lines.json</code>（IAU星座名・星座線）および <code>mw.json</code>（天の川輪郭）。個別の原典と変換方法は <a href="https://github.com/ofrohn/d3-celestial#files" target="_blank" rel="noopener">D3-Celestialのデータ出典一覧</a>を参照。</li>
         </ul>
         <hr />
-        <p>本ページの情報は、各項目に紐付けた直接出典と、上記の照合・背景資料を区別して編集・構成しています。詳細な出典やご質問は管理者：<a href="https://x.com/trapezium_orion" target="_blank" rel="noopener">@trapezium_orion (X/Twitter)</a>までお問い合わせください。</p>
+        <p>本ページの情報は、各項目に紐付けた直接出典と、上記の照合・背景資料を区別して編集・構成しています。詳細な出典やご質問は管理者： <span class="contact-email" data-contact-email="YXludS5zdGFyLmN1bHR1cmVAZ21haWwuY29t">（メールアドレスの表示にはJavaScriptを有効にしてください）</span> までお問い合わせください。</p>
         <a class="back-link" href="index.html">星図ビューアへ戻る</a>
       </article>
     </main>
